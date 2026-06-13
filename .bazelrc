@@ -1,0 +1,23 @@
+# BazelCon 2026 — "Building Without Bytes" workshop
+# Remote-cache-friendly, hermetic defaults.
+
+# bzlmod is the only dependency model here (default in Bazel 7+, explicit for clarity).
+common --enable_bzlmod
+
+# Reproducibility: don't leak the host environment into actions.
+build --incompatible_strict_action_env
+
+# Make build/test output legible during the live demo.
+common --color=yes
+build --show_timestamps
+test --test_output=errors
+
+# Friendlier disk-cache so attendees see warm-cache speedups without a remote.
+# (Override with --disk_cache= or a real --remote_cache=... in CI.)
+build --disk_cache=~/.cache/bazel-disk
+
+# Surface this repo's own conventions.
+common --enable_platform_specific_config
+
+# Local developer overrides (gitignored).
+try-import %workspace%/.bazelrc.user

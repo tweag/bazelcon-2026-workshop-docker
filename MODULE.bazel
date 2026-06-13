@@ -1,0 +1,49 @@
+"""BazelCon 2026 — "Building Without Bytes".
+
+Single workspace that builds the container-image samples, the benchmark,
+and the Slidev presentation. Versions are pinned to the latest BCR releases
+(Requirement #8: track latest rules_oci / rules_img).
+"""
+
+module(
+    name = "building_without_bytes",
+    version = "0.1.0",
+)
+
+# --- Core rulesets (latest BCR releases as of scaffolding) ---
+bazel_dep(name = "rules_oci", version = "2.3.0")
+bazel_dep(name = "rules_img", version = "0.3.12")
+bazel_dep(name = "rules_python", version = "2.0.2")
+bazel_dep(name = "rules_pkg", version = "1.2.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+
+# --- Python toolchain ---
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.12",
+    is_default = True,
+)
+use_repo(python)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pypi",
+    python_version = "3.12",
+    requirements_lock = "//samples/python:requirements_lock.txt",
+)
+use_repo(pip, "pypi")
+
+# --- Base image for the OCI / img samples ---
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "python_base",
+    image = "index.docker.io/library/python:3.12-slim-bookworm",
+    digest = "sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
+)
+use_repo(oci, "python_base", "python_base_linux_amd64", "python_base_linux_arm64")

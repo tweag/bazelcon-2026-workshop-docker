@@ -1,0 +1,6 @@
+# Direct Python dependencies for the Graphviz sample.
+# The `graphviz` package is a thin wrapper that shells out to the `dot`
+# system binary (the non-hermetic, apt-installed dependency we package as a
+# layer). It has no transitive Python deps — keeping the deps layer tiny and
+# the layer-caching story easy to read on a slide.
+graphviz==0.20.3

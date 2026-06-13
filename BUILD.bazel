@@ -1,0 +1,16 @@
+# Root package. Most build logic lives under //samples, //slides, //benchmark,
+# and //tools. This file anchors the workspace and hosts repo-wide aliases.
+
+package(default_visibility = ["//visibility:public"])
+
+# Convenience alias: `bazel build //:slides` renders the deck.
+alias(
+    name = "slides",
+    actual = "//slides:build",
+)
+
+# Convenience alias: `bazel run //:graph -- //...` renders the dependency graph.
+alias(
+    name = "graph",
+    actual = "//tools:render_graph",
+)

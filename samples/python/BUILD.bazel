@@ -1,0 +1,12 @@
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["requirements_lock.txt"])
+
+# `bazel run //samples/python:requirements.update` re-locks requirements.in.
+compile_pip_requirements(
+    name = "requirements",
+    src = "requirements.in",
+    requirements_txt = "requirements_lock.txt",
+)
