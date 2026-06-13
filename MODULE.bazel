@@ -43,7 +43,7 @@ oci.pull(
     digest = "sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf",
     platforms = [
         "linux/amd64",
-        "linux/arm64",
+        "linux/arm64/v8",  # this image's arm64 manifest carries the v8 variant
     ],
 )
-use_repo(oci, "python_base", "python_base_linux_amd64", "python_base_linux_arm64")
+use_repo(oci, "python_base", "python_base_linux_amd64", "python_base_linux_arm64_v8")
