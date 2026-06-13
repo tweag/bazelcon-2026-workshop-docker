@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  bazel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps (dot for the graph demo)
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      # Bazelisk ships on GitHub runners and reads .bazelversion.
+      - name: Build everything
+        run: bazel build //...
+
+      - name: Test everything (TASK §5.1)
+        run: bazel test //... --test_output=errors
+
+      # TASK §5.3 — the dogfooding invariant: the deck must depend on the
+      # samples it transcludes, or the "slides are a build artifact" thesis
+      # is just narration.
+      - name: Dogfooding invariant (//slides depends on //samples)
+        run: |
+          path=$(bazel query 'somepath(//slides:srcs, //samples/python:app.py)')
+          echo "$path"
+          test -n "$path"
+
+      # TASK §5.4 — reproducibility: the same inputs must yield the same OCI
+      # image digest (content-addressable, not a daemon snapshot).
+      - name: Reproducible image digest
+        run: |
+          bazel build //samples/python:image
+          a=$(sha256sum bazel-bin/samples/python/image/index.json | cut -d' ' -f1)
+          bazel clean
+          bazel build //samples/python:image
+          b=$(sha256sum bazel-bin/samples/python/image/index.json | cut -d' ' -f1)
+          echo "digest A=$a"
+          echo "digest B=$b"
+          test "$a" = "$b"
+
+  slides:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build the deck (transclusion must resolve)
+        working-directory: slides
+        run: |
+          npm ci
+          npx slidev build --out dist
