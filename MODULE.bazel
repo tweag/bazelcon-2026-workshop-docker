@@ -48,3 +48,15 @@ oci.pull(
     ],
 )
 use_repo(oci, "python_base", "python_base_linux_amd64", "python_base_linux_arm64_v8")
+
+# Same base, pulled through rules_img's own extension, for the //samples/rules_img
+# comparison (same layer, different ruleset).
+images = use_extension("@rules_img//img:extensions.bzl", "images")
+images.pull(
+    name = "python_base_img",
+    registry = "index.docker.io",
+    repository = "library/python",
+    digest = "sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf",
+    tag = "3.12-slim-bookworm",
+)
+use_repo(images, "rules_img_images.bzl")

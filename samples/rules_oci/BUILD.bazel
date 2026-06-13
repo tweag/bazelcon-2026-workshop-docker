@@ -1,0 +1,29 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+
+# The "after", via rules_oci (TASK §2.3). Same app layer as the rules_img
+# variant next door — the ONLY difference is the ruleset, so the two are an
+# honest side-by-side comparison. The shared layer comes from the Python
+# sample, keeping inputs identical (supports the §2.8 equivalence story).
+package(default_visibility = ["//visibility:public"])
+
+#region oci
+oci_image(
+    name = "image",
+    base = "@python_base",
+    entrypoint = ["/app/app"],
+    tars = ["//samples/python:app_layer"],
+)
+#endregion
+
+# bazel run //samples/rules_oci:load && docker run --rm bwb/rules-oci
+oci_load(
+    name = "load",
+    image = ":image",
+    repo_tags = ["bwb/rules-oci:latest"],
+)
+
+build_test(
+    name = "image_build_test",
+    targets = [":image"],
+)
