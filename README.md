@@ -8,6 +8,11 @@ the Slidev presentation about them — the slides are a build artifact of the
 same graph that builds the images. The plan and task breakdown live in
 [`TASK.md`](TASK.md).
 
+📊 **Live deck:** https://akafael.github.io/bazelcon2026-docker-build-workshop/
+(published from `main` by [`.github/workflows/pages.yml`](.github/workflows/pages.yml);
+enable once via repo Settings → Pages → Source = "GitHub Actions").
+📄 **PDF:** [`docs/building-without-bytes.pdf`](docs/building-without-bytes.pdf).
+
 ## Prerequisites
 
 - [Bazelisk](https://github.com/bazelbuild/bazelisk) (pins Bazel via `.bazelversion`)

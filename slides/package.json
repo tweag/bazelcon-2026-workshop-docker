@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "slidev --open",
     "build": "slidev build",
+    "build:pages": "slidev build --base /bazelcon2026-docker-build-workshop/ --out dist",
     "export": "slidev export --output ../docs/building-without-bytes.pdf"
   },
   "dependencies": {
