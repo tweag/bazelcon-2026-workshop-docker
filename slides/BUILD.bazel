@@ -1,0 +1,47 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# The deck (Markdown) and the real sources it transcludes via `<<< ../...`.
+# Listing the samples as srcs makes the dogfooding dependency explicit:
+# //slides depends on //samples (TASK §3.7).
+filegroup(
+    name = "srcs",
+    srcs = [
+        "slides.md",
+        "vite.config.ts",
+        "//samples/python:app.py",
+        "//samples/python:BUILD.bazel",
+        "//samples/python:Dockerfile",
+    ],
+)
+
+# Slidev driven through Bazel (pragmatic wrapper; hermetic rules_js is the
+# TASK §3.8 spike). All are `bazel run` targets.
+sh_binary(
+    name = "present",  # bazel run //slides:present  -> dev server w/ hot reload
+    srcs = ["slidev.sh"],
+)
+
+sh_binary(
+    name = "build",  # bazel run //slides:build  -> static HTML in slides/dist
+    srcs = ["slidev.sh"],
+    args = ["build"],
+)
+
+sh_binary(
+    name = "export_pdf",  # bazel run //slides:export_pdf  -> docs/*.pdf
+    srcs = ["slidev.sh"],
+    args = [
+        "export",
+        "--output",
+        "../docs/building-without-bytes.pdf",
+    ],
+)
+
+# Sanity check that the deck + transcluded sources are all present (TASK §3.9).
+build_test(
+    name = "srcs_build_test",
+    targets = [":srcs"],
+)

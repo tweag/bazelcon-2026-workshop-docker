@@ -8,7 +8,6 @@ slides/.slidev/
 slides/dist/
 
 # Generated artifacts
-slides/graphs/*.png
 slides/graphs/*.dot
 *.pdf
 !docs/**/*.pdf

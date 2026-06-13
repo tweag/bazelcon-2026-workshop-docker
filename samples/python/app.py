@@ -21,6 +21,7 @@ import sys
 import graphviz
 
 
+#region build_graph
 def build_graph() -> graphviz.Digraph:
     """The supply chain that builds this very talk (the dogfooding loop)."""
     dot = graphviz.Digraph("supply_chain", comment="Building Without Bytes")
@@ -40,6 +41,7 @@ def build_graph() -> graphviz.Digraph:
     dot.edge("image", "registry")
     dot.edge("src", "slides", label="transclude")  # the deck imports this file
     return dot
+#endregion
 
 
 def main(argv: list[str] | None = None) -> int:

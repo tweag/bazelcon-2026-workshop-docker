@@ -51,6 +51,7 @@ pkg_tar(
 )
 
 # --- The OCI image (the "after": no Docker daemon) ---------------------------
+#region oci
 oci_image(
     name = "image",
     base = "@python_base",
@@ -61,6 +62,7 @@ oci_image(
     ],
     tars = [":app_layer"],
 )
+#endregion
 
 # Load into the local Docker daemon for the live demo / smoke test:
 #   bazel run //samples/python:image_load && docker run --rm bwb/python-graphviz
