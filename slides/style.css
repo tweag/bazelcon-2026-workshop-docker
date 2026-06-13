@@ -1,0 +1,116 @@
+/* BazelCon 2026 theme — Bazel-green branding for "Building Without Bytes".
+ * Auto-loaded by Slidev. There is no published Bazel Slidev theme, so this is
+ * a custom skin on top of @slidev/theme-default using Bazel's brand palette. */
+
+:root {
+  --bazel-green: #43a047;
+  --bazel-green-dark: #2e7d32;
+  --bazel-green-light: #76d275;
+  --bazel-ink: #0d1f14;
+
+  /* Drive the default theme's accents from the Bazel palette. */
+  --slidev-theme-primary: var(--bazel-green);
+}
+
+/* Brand accent bar across the top of content slides. */
+.slidev-layout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--bazel-green-light),
+    var(--bazel-green) 45%,
+    var(--bazel-green-dark)
+  );
+}
+
+/* Persistent BazelCon footer mark (skipped on the cover). */
+.slidev-layout:not(.bazel-cover)::after {
+  content: 'BazelCon 2026 · Building Without Bytes';
+  position: absolute;
+  bottom: 0.7rem;
+  right: 1.1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--bazel-green-dark);
+  opacity: 0.55;
+}
+
+/* Headings and links in Bazel green. */
+.slidev-layout h1 {
+  color: var(--bazel-green-dark);
+}
+.slidev-layout h2,
+.slidev-layout h3 {
+  color: var(--bazel-green);
+}
+.slidev-layout a {
+  color: var(--bazel-green-dark);
+  text-decoration-color: var(--bazel-green-light);
+}
+
+/* Inline code gets a subtle green tint. */
+.slidev-layout :not(pre) > code {
+  color: var(--bazel-green-dark);
+  background: rgba(67, 160, 71, 0.1);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+/* Code-fence frames echo the brand bar. */
+.slidev-layout pre.slidev-code,
+.slidev-layout .slidev-code-wrapper pre {
+  border: 1px solid rgba(67, 160, 71, 0.25);
+  border-left: 4px solid var(--bazel-green);
+  border-radius: 8px;
+}
+
+/* --- Cover slide -------------------------------------------------------- */
+.bazel-cover {
+  background:
+    radial-gradient(60% 80% at 80% 10%, rgba(118, 210, 117, 0.18), transparent),
+    linear-gradient(160deg, var(--bazel-ink), #11371f 70%, #0a2615);
+  color: #eafff0;
+}
+.bazel-cover::before {
+  height: 0; /* no top bar on the cover; we use the blocks motif instead */
+}
+.bazel-cover h1 {
+  color: #ffffff;
+}
+.bazel-cover h3 {
+  color: var(--bazel-green-light);
+}
+
+/* Stacked-blocks motif (a nod to the Bazel logo) on the cover. */
+.bazel-blocks {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 1.5rem;
+}
+.bazel-blocks i {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--bazel-green);
+}
+.bazel-blocks i:nth-child(1) { background: var(--bazel-green-light); }
+.bazel-blocks i:nth-child(4) { background: var(--bazel-green-dark); }
+
+/* --- Statement layout --------------------------------------------------- */
+.slidev-layout.statement {
+  background: linear-gradient(160deg, var(--bazel-ink), #11371f);
+  color: #eafff0;
+}
+.slidev-layout.statement h1,
+.slidev-layout.statement h2 {
+  color: var(--bazel-green-light);
+}
+.slidev-layout.statement::after {
+  color: var(--bazel-green-light);
+}

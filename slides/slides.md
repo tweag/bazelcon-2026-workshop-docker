@@ -8,10 +8,12 @@ info: |
   These slides are built by the same Bazel workspace that builds the
   container images they describe. The code on screen is imported live from
   the repo's real source files.
-class: text-center
+class: text-center bazel-cover
 transition: slide-left
 mdc: true
 ---
+
+<div class="bazel-blocks"><i></i><i></i><i></i><i></i></div>
 
 # Building Without Bytes
 
