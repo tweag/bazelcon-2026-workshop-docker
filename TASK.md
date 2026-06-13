@@ -61,12 +61,15 @@ A clean `git clone && bazel build //...` produces:
    build, kept as the benchmark baseline and the on-slide contrast.
    - ✅ **Artefact:** [`samples/python/Dockerfile`](samples/python/Dockerfile)
      (lives alongside the sample; builds & renders the PNG via `apt-get install graphviz`)
-3. [ ] **`samples/oci/`** — the "after": the same image via `rules_oci`
+3. [x] **`samples/oci/`** — the "after": the same image via `rules_oci`
    (`oci_image`, `oci_load`, `oci_push`) with explicit, granular layers.
-   - ↳ _rules_oci is exercised by `//samples/python:image`; a standalone
-     `samples/oci/` variant is still to come._
-4. [ ] **`samples/img/`** — the equivalent via `rules_img`, highlighting its
+   - ✅ **Artefact:** [`samples/rules_oci/BUILD.bazel`](samples/rules_oci/BUILD.bazel)
+     → `//samples/rules_oci:image` (+ `:load`); reuses `//samples/python:app_layer`
+4. [x] **`samples/img/`** — the equivalent via `rules_img`, highlighting its
    differences from `rules_oci`.
+   - ✅ **Artefact:** [`samples/rules_img/BUILD.bazel`](samples/rules_img/BUILD.bazel)
+     → `//samples/rules_img:image` (+ `:load`); same app layer via
+     `image_manifest` / `layer_from_tar` / `image_load`
 5. [ ] Image tests that fan out in parallel (`oci`/container structure tests,
    smoke tests) to demonstrate parallelized testing.
    - ↳ _only `//samples/python:image_build_test` exists so far; container
@@ -80,6 +83,9 @@ A clean `git clone && bazel build //...` produces:
    `img` variants produce functionally identical images (same entrypoint,
    same runtime behavior on a smoke request) so the "before/after" contrast
    is honest.
+   - ↳ _the `rules_oci` and `rules_img` variants share the exact same
+     `//samples/python:app_layer` and were verified by hand to run
+     identically; an automated equivalence assertion is still to add._
 9. [x] **`samples/python/`** — a Python + **Graphviz** sample (`rules_python` +
    `py_binary`) packaged into an OCI image. The app uses the `graphviz`
    Python package, which shells out to the `dot` system binary — a clear,
@@ -195,6 +201,28 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
    concrete proof behind the "content-addressable" claim in `PROPOSAL.md`.
    - ✅ **Artefact:** "Reproducible image digest" step in
      [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+## 6. Serve slides as GitHub Pages
+
+1. [x] Configure the Slidev build base path for project pages
+   (`slidev build --base /<repo>/`), so assets resolve under
+   `https://<user>.github.io/<repo>/`.
+   - ✅ **Artefact:** `build:pages` script in [`slides/package.json`](slides/package.json)
+     (workflow derives the base from `$GITHUB_REPOSITORY`)
+2. [x] GitHub Actions workflow that builds the deck and deploys the static
+   site to GitHub Pages (`actions/upload-pages-artifact` +
+   `actions/deploy-pages`), triggered on push to `main`.
+   - ✅ **Artefact:** [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+3. [x] Set the workflow permissions (`pages: write`, `id-token: write`) and
+   the `github-pages` environment; document enabling Pages → "GitHub Actions"
+   as the source in repo settings.
+   - ✅ **Artefact:** permissions + `github-pages` environment in
+     [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+     _Manual one-time step: repo Settings → Pages → Source = "GitHub Actions"._
+4. [x] Link the published URL from `README.md` so attendees can open the live
+   deck.
+   - ✅ **Artefact:** [`README.md`](README.md) →
+     `https://akafael.github.io/bazelcon2026-docker-build-workshop/`
 
 ## Acceptance criteria
 
