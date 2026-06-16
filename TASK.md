@@ -70,10 +70,12 @@ A clean `git clone && bazel build //...` produces:
    - ✅ **Artefact:** [`samples/rules_img/BUILD.bazel`](samples/rules_img/BUILD.bazel)
      → `//samples/rules_img:image` (+ `:load`); same app layer via
      `image_manifest` / `layer_from_tar` / `image_load`
-5. [ ] Image tests that fan out in parallel (`oci`/container structure tests,
+5. [x] Image tests that fan out in parallel (`oci`/container structure tests,
    smoke tests) to demonstrate parallelized testing.
-   - ↳ _only `//samples/python:image_build_test` exists so far; container
-     structure tests still to add._
+   - ✅ **Artefact:** `//samples/python:image_structure_test`
+     ([`container_structure_test`](samples/python/BUILD.bazel), `driver = "tar"`)
+     + [`image_test.yaml`](samples/python/image_test.yaml) — **daemonless**
+     validation (Q3), plus the `*_build_test` targets across samples.
 6. [ ] Demonstrate incremental rebuild + layer cache reuse on a small source
    change (this is the payoff shown live).
 7. [x] Unit tests for the sample app itself (`go_test` / `py_test` /
@@ -124,6 +126,11 @@ A clean `git clone && bazel build //...` produces:
       [`tools/local_registry.sh`](tools/local_registry.sh) →
       `//tools:local_registry`. Verified: both push; shared base blobs dedupe
       at the registry ("from container registry" / "existing blob").
+13. [x] **`samples/shared_layers/`** — two images sharing layers (Q5): `image_a`
+    and `image_b` on the same base + `:common_layer`, only the app layer differs.
+    - ✅ **Artefact:** [`samples/shared_layers/`](samples/shared_layers/) →
+      `:image_a`/`:image_b` + the `:digests` proof (verified: 5 shared blob
+      digests, 1 unique app layer each).
 
 ## 3. Presentation (`//slides/...` — "Slide-as-Code")
 
@@ -262,6 +269,16 @@ Instructor: Rafael Lima · Sponsored by Tweag by Modus Create.
      [`slides/style.css`](slides/style.css) → [`docs/building-without-bytes.pdf`](docs/building-without-bytes.pdf)
 3. [x] Runnable samples backing the labs: distroless (§2.11), the "docker tax"
    benchmark (§4.1), and registry push (§2.12).
+4. [x] The deck answers the 5 core how-to questions, each on a named slide:
+   - **rules_oci steps** → "rules_oci, start to finish"
+   - **rules_img steps** → "rules_img, start to finish"
+   - **validate without a daemon** → "Validate images without the daemon"
+     (`container_structure_test`, `driver = "tar"`)
+   - **build layers + dedup** → "Architect layers by volatility" + "Action deduplication"
+   - **shared layers + two-image sample** → "Shared layers: two images, one blob"
+     (`//samples/shared_layers`)
+   Trimmed to fit 90 min: merged the two hermeticity slides, cut ship-vs-source,
+   demoted the dogfooding loop to a closing flourish.
 
 ## Acceptance criteria
 
