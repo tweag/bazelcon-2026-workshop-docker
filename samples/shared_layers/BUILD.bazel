@@ -1,0 +1,49 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+# Two images that share layers (workshop Q5). Both sit on the same @python_base
+# and include the same :common_layer; only the app layer differs. Because
+# layers are content-addressed, the base + common blobs are byte-identical
+# across both images — so they're built once, cached once, and pushed once.
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["config.txt"])
+
+# Shared layer (e.g. shared config/deps) — identical in both images.
+pkg_tar(
+    name = "common_layer",
+    srcs = ["config.txt"],
+    package_dir = "/etc/bwb",
+)
+
+# Per-app layers — the only thing that differs.
+pkg_tar(name = "a_layer", srcs = ["a.txt"], package_dir = "/app")
+
+pkg_tar(name = "b_layer", srcs = ["b.txt"], package_dir = "/app")
+
+#region shared
+oci_image(
+    name = "image_a",
+    base = "@python_base",
+    tars = [":common_layer", ":a_layer"],  # common_layer shared with image_b ↓
+)
+
+oci_image(
+    name = "image_b",
+    base = "@python_base",
+    tars = [":common_layer", ":b_layer"],  # same :common_layer → same blob digest
+)
+#endregion
+
+build_test(
+    name = "images_build_test",
+    targets = [":image_a", ":image_b"],
+)
+
+# bazel run //samples/shared_layers:digests → prints the shared layer digests.
+sh_binary(
+    name = "digests",
+    srcs = ["digests.sh"],
+)
