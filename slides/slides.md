@@ -289,6 +289,27 @@ layout: section
 <div class="opacity-60">10 min · wrap-up + Q&A</div>
 
 ---
+layout: two-cols-header
+layoutClass: gap-6
+---
+
+# Same image, two rulesets
+
+Same `//samples/python:app_layer` — only the ruleset differs.
+
+::left::
+
+**`rules_oci`** — `oci_image`
+
+<<< ../samples/rules_oci/BUILD.bazel#oci python {*}{maxHeight:'300px'}
+
+::right::
+
+**`rules_img`** — `image_manifest` + `layer_from_tar`
+
+<<< ../samples/rules_img/BUILD.bazel#img python {*}{maxHeight:'300px'}
+
+---
 
 # Same artifact, three philosophies
 
