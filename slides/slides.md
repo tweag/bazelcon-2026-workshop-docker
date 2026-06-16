@@ -57,43 +57,29 @@ layout: section
 
 ---
 
-# Bazel's promise: {Fast, Correct}
+# Correct means hermetic
 
-**Correct** means **hermetic** — a build with *no external influence*, so
-identical inputs always produce identical outputs.
+Bazel's promise is **{Fast, Correct}** — and *correct* means **hermetic**: a
+build with no external influence, so identical inputs → identical outputs.
 
-<div class="mt-4">
-
-Reproducibility isn't bolted on; it's the whole point. Everything in this
-workshop is a consequence of taking that seriously for **container images**.
-
-</div>
-
----
-
-# Two kinds of hermeticity
-
-<div class="grid grid-cols-2 gap-6 mt-4">
+<div class="grid grid-cols-2 gap-6 mt-5">
 <div>
 
-### Docker
-**Runtime / deploy** hermeticity.<br>
-Bundles deps so the artifact runs the same everywhere.<br>
-But `docker build` itself is **not** hermetic — `RUN apt-get` is networked,
-timestamped, order-sensitive.
+### Docker — *runtime* hermeticity
+Bundles deps so the artifact runs the same everywhere. But `docker build`
+itself isn't hermetic: `RUN apt-get` is networked, timestamped, order-sensitive.
 
 </div>
 <div>
 
-### Bazel
-**Build** hermeticity.<br>
-Only declared inputs are visible; identical inputs → identical outputs.<br>
-Emits a reproducible, content-addressed artifact.
+### Bazel — *build* hermeticity
+Only declared inputs are visible; identical inputs → identical,
+content-addressed outputs.
 
 </div>
 </div>
 
-<div class="mt-6 text-center opacity-80">
+<div class="mt-5 text-center opacity-80">
 
 Docker hermetizes the **deploy** boundary; Bazel the **build**. Want both.
 
@@ -151,6 +137,22 @@ graph; changing `app.py` reuses the base + deps layers untouched.
 <<< ../samples/python/BUILD.bazel#oci python {*}{maxHeight:'360px'}
 
 ---
+
+# rules_oci, start to finish
+
+1. **Pull a base** — `oci.pull` in `MODULE.bazel` (digest-pinned, multi-arch).
+2. **Build a layer** — `pkg_tar` the app's runfiles (or any files).
+3. **Assemble** — `oci_image(base, tars = [...], entrypoint = [...])`.
+4. **Load / push** — `oci_load` → Docker · `oci_push` → registry.
+
+```python
+oci_image(name = "image", base = "@python_base",
+          tars = [":app_layer"], entrypoint = ["/app/app"])
+oci_load(name = "image_load", image = ":image", repo_tags = ["bwb/app:latest"])
+oci_push(name = "push", image = ":image", repository = "localhost:5000/bwb/app")
+```
+
+---
 layout: section
 ---
 
@@ -159,21 +161,22 @@ layout: section
 
 ---
 
-# Is Docker a good hermeticity validator?
+# Validate images without the daemon
 
-As a **negative test** — yes:
+`container_structure_test` with `driver = "tar"` checks the image's **files and
+config in the Bazel sandbox** — no container runtime, no Docker daemon:
 
-```bash
-docker run --network=none --rm myscript   # fails if it needs the host/network
+<<< ../samples/python/image_test.yaml yaml {*}{maxHeight:'210px'}
+
+```python
+container_structure_test(name = "image_structure_test",
+    image = ":image.tar", configs = ["image_test.yaml"], driver = "tar")
 ```
 
-A pinned base with no network *surfaces undeclared dependencies*. But it's
-**not a proof** — build-time network, timestamps, and ordering still sneak in.
+<div class="mt-2 opacity-70 text-sm">
 
-<div class="mt-4">
-
-Bazel's **sandbox** is the stronger validator: it exposes only *declared*
-inputs, so a missing dependency fails the build — every time.
+Aside — a quick *negative* test for scripts: `docker run --network=none …`
+surfaces undeclared host deps (handy, but not a proof; the sandbox is).
 
 </div>
 
@@ -239,6 +242,33 @@ Layers are **content-addressed**, so the win compounds:
 Optimization = make common layers **byte-identical**, and dedup does the rest.
 
 </div>
+
+---
+layout: two-cols-header
+layoutClass: gap-6
+---
+
+# Shared layers: two images, one blob
+
+Both images sit on the same base + `:common_layer`; only the app layer differs.
+
+::left::
+
+<<< ../samples/shared_layers/BUILD.bazel#shared python {*}{maxHeight:'250px'}
+
+::right::
+
+```bash
+bazel run \
+  //samples/shared_layers:digests
+# SHARED (built & pushed once):
+#  sha256:…  base layers
+#  sha256:…  :common_layer
+# + 1 unique app layer each
+```
+
+What can be shared? The **base OS** and any **byte-identical** layer (deps,
+config). Content-addressing makes the dedup automatic.
 
 ---
 
@@ -311,6 +341,19 @@ Same `//samples/python:app_layer` — only the ruleset differs.
 
 ---
 
+# rules_img, start to finish
+
+1. **Pull a base** — `images.pull` (rules_img's own extension) in `MODULE.bazel`.
+2. **Build a layer** — `layer_from_tar` (reuse a `pkg_tar`) or `image_layer`.
+3. **Assemble** — `image_manifest(base, layers = [...], entrypoint = [...])`;
+   `image_index` for multi-arch.
+4. **Load / push** — `image_load` → Docker · `image_push` → registry.
+
+Tar-less + a Go-based incremental loader — layers stay transparent blobs until
+final assembly, so builds and pushes stay fast at scale.
+
+---
+
 # Same artifact, three philosophies
 
 | Feature | Dockerfile | rules_oci | rules_img |
@@ -325,29 +368,21 @@ Same `//samples/python:app_layer` — only the ruleset differs.
 layers stay transparent blobs until final assembly.
 
 ---
+layout: center
+class: text-center
+---
 
-# Ship as Docker, or as source?
+# Takeaways
 
-<div class="grid grid-cols-2 gap-6 mt-4">
-<div>
+**Stop scripting, start mapping** — declare *what goes where*, not what to run.<br>
+**Build layers, share layers** — split by volatility; byte-identical layers dedupe.<br>
+**Go daemonless** — validate images with no runtime; push with no socket.<br>
+**Evaluate `rules_img`** — if `tar` is the bottleneck, upgrade.<br>
+**Slide-as-Code** — the deck is just another build target.
 
-### Docker image
-Self-contained, immutable, content-addressed, scannable, rollback-able.<br>
-Carries **deploy hermeticity**.
+<div class="mt-8 opacity-70">
 
-</div>
-<div>
-
-### Source only
-Smaller to transfer — but pushes non-hermeticity onto the consumer's build
-("works on my machine" returns).
-
-</div>
-</div>
-
-<div class="mt-6 text-center opacity-80">
-
-With Bazel you emit **both from one graph** — choose per audience.
+What you build is byte-for-byte what runs — layers are just build outputs.
 
 </div>
 
@@ -356,13 +391,11 @@ layout: two-cols
 layoutClass: gap-8
 ---
 
-# The dogfooding loop
+# One last loop
 
-The Python sample renders **this repo's own dependency graph** with `dot`,
-and the deck imports the result.
-
-A Bazel action, needing an apt-installed binary packaged as a layer, draws
-the graph of the build that produced the slide.
+The Python sample renders **this repo's own dependency graph** with `dot`, and
+the deck imports the result — a build action drawing the graph of the build
+that produced this very slide.
 
 ```bash
 bazel run //tools:render_graph \
@@ -374,22 +407,3 @@ bazel run //tools:render_graph \
 <img src="./graphs/dogfooding.png"
      class="max-h-72 object-contain"
      alt="first-party dependency graph of //samples/python:image" />
-
----
-layout: center
-class: text-center
----
-
-# Takeaways
-
-**Stop scripting, start mapping** — declare *what goes where*, not what to run.<br>
-**Architect for layers** — heavy deps apart from volatile code.<br>
-**Go daemonless** — better CI security and portability.<br>
-**Evaluate `rules_img`** — if `tar` is the bottleneck, upgrade.<br>
-**Slide-as-Code** — the deck is just another build target.
-
-<div class="mt-8 opacity-70">
-
-Once layers are just artifacts, the daemon stops being special.
-
-</div>
