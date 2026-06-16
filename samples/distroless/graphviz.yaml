@@ -1,0 +1,20 @@
+# Debian packages for the hermetic `dot` layer (TASK §2.9 / workshop Module 3).
+#
+# Regenerate the lockfile after any change:
+#   bazel run @graphviz_apt//:lock
+#
+# Pinned to a Debian snapshot so resolution is reproducible.
+version: 1
+
+sources:
+  - channel: bullseye main
+    urls:
+      - https://snapshot-cloudflare.debian.org/archive/debian/20240210T223313Z
+      - https://snapshot.debian.org/archive/debian/20240210T223313Z
+
+archs:
+  - "amd64"
+  - "arm64"
+
+packages:
+  - "graphviz"

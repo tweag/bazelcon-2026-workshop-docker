@@ -1,0 +1,44 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+
+# The capstone (workshop Module 3 / TASK §2.9): close the `dot` system-dep gap
+# *hermetically*. Instead of `RUN apt-get install graphviz`, rules_distroless
+# materializes `dot` + its 162 transitive .debs (pinned in graphviz.lock.json)
+# into `@graphviz_apt//:flat` — a content-addressed layer built with no network,
+# no daemon, no RUN. We build the rootfs ON SCRATCH (not layered onto a
+# merged-usr base, which conflicts with the base's /lib -> usr/lib symlink).
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "graphviz.yaml",
+    "graphviz.lock.json",
+])
+
+#region distroless
+oci_image(
+    name = "image",
+    architecture = "amd64",
+    cmd = ["-V"],
+    entrypoint = ["/usr/bin/dot"],
+    os = "linux",
+    tars = ["@graphviz_apt//:flat"],  # hermetic `dot` + deps, pinned in the lock
+)
+#endregion
+
+# bazel run //samples/distroless:image_load && docker run --rm bwb/distroless
+#   -> "dot - graphviz version 2.43.0" from a fully hermetic, pinned toolchain.
+#
+# NOTE: `dot` runs, but rendering (`-Tpng`/`-Tsvg`) needs the plugin registry
+# (/usr/lib/.../graphviz/config6) that Debian's postinst normally writes via
+# `dot -c`. Generating that config at build time, and combining this layer with
+# the Python app for a full hermetic render, is the documented follow-up.
+oci_load(
+    name = "image_load",
+    image = ":image",
+    repo_tags = ["bwb/distroless:latest"],
+)
+
+build_test(
+    name = "image_build_test",
+    targets = [":image"],
+)

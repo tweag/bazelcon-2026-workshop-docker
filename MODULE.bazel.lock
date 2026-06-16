@@ -33,6 +33,7 @@
     "https://bcr.bazel.build/modules/bazel_features/1.17.0/MODULE.bazel": "039de32d21b816b47bd42c778e0454217e9c9caac4a3cf8e15c7231ee3ddee4d",
     "https://bcr.bazel.build/modules/bazel_features/1.18.0/MODULE.bazel": "1be0ae2557ab3a72a57aeb31b29be347bcdc5d2b1eb1e70f39e3851a7e97041a",
     "https://bcr.bazel.build/modules/bazel_features/1.19.0/MODULE.bazel": "59adcdf28230d220f0067b1f435b8537dd033bfff8db21335ef9217919c7fb58",
+    "https://bcr.bazel.build/modules/bazel_features/1.20.0/MODULE.bazel": "8b85300b9c8594752e0721a37210e34879d23adc219ed9dc8f4104a4a1750920",
     "https://bcr.bazel.build/modules/bazel_features/1.21.0/MODULE.bazel": "675642261665d8eea09989aa3b8afb5c37627f1be178382c320d1b46afba5e3b",
     "https://bcr.bazel.build/modules/bazel_features/1.23.0/MODULE.bazel": "fd1ac84bc4e97a5a0816b7fd7d4d4f6d837b0047cf4cbd81652d616af3a6591a",
     "https://bcr.bazel.build/modules/bazel_features/1.27.0/MODULE.bazel": "621eeee06c4458a9121d1f104efb80f39d34deff4984e778359c60eaf1a8cb65",
@@ -48,6 +49,8 @@
     "https://bcr.bazel.build/modules/bazel_features/1.47.0/source.json": "4ba0b5138327f2d73352a51547a4e49a0a828ef400e046b15334d8905bf6b7ff",
     "https://bcr.bazel.build/modules/bazel_features/1.9.0/MODULE.bazel": "885151d58d90d8d9c811eb75e3288c11f850e1d6b481a8c9f766adee4712358b",
     "https://bcr.bazel.build/modules/bazel_features/1.9.1/MODULE.bazel": "8f679097876a9b609ad1f60249c49d68bfab783dd9be012faf9d82547b14815a",
+    "https://bcr.bazel.build/modules/bazel_lib/3.0.0-beta.1/MODULE.bazel": "407729e232f611c3270005b016b437005daa7b1505826798ea584169a476e878",
+    "https://bcr.bazel.build/modules/bazel_lib/3.0.0-rc.0/MODULE.bazel": "d6e00979a98ac14ada5e31c8794708b41434d461e7e7ca39b59b765e6d233b18",
     "https://bcr.bazel.build/modules/bazel_lib/3.0.0/MODULE.bazel": "22b70b80ac89ad3f3772526cd9feee2fa412c2b01933fea7ed13238a448d370d",
     "https://bcr.bazel.build/modules/bazel_lib/3.0.0/source.json": "895f21909c6fba01d7c17914bb6c8e135982275a1b18cdaa4e62272217ef1751",
     "https://bcr.bazel.build/modules/bazel_skylib/1.0.3/MODULE.bazel": "bcb0fd896384802d1ad283b4e4eb4d718eebd8cb820b0a2c3a347fb971afd9d8",
@@ -68,7 +71,8 @@
     "https://bcr.bazel.build/modules/buildozer/8.5.1/MODULE.bazel": "a35d9561b3fc5b18797c330793e99e3b834a473d5fbd3d7d7634aafc9bdb6f8f",
     "https://bcr.bazel.build/modules/buildozer/8.5.1/source.json": "e3386e6ff4529f2442800dee47ad28d3e6487f36a1f75ae39ae56c70f0cd2fbd",
     "https://bcr.bazel.build/modules/gawk/5.3.2.bcr.1/MODULE.bazel": "cdf8cbe5ee750db04b78878c9633cc76e80dcf4416cbe982ac3a9222f80713c8",
-    "https://bcr.bazel.build/modules/gawk/5.3.2.bcr.1/source.json": "fa7b512dfcb5eafd90ce3959cf42a2a6fe96144ebbb4b3b3928054895f2afac2",
+    "https://bcr.bazel.build/modules/gawk/5.3.2.bcr.3/MODULE.bazel": "f1b7bb2dd53e8f2ef984b39485ec8a44e9076dda5c4b8efd2fb4c6a6e856a31d",
+    "https://bcr.bazel.build/modules/gawk/5.3.2.bcr.3/source.json": "ebe931bfe362e4b41e59ee00a528db6074157ff2ced92eb9e970acab2e1089c9",
     "https://bcr.bazel.build/modules/google_benchmark/1.8.2/MODULE.bazel": "a70cf1bba851000ba93b58ae2f6d76490a9feb74192e57ab8e8ff13c34ec50cb",
     "https://bcr.bazel.build/modules/googletest/1.11.0/MODULE.bazel": "3a83f095183f66345ca86aa13c58b59f9f94a2f81999c093d4eeaa2d262d12f4",
     "https://bcr.bazel.build/modules/googletest/1.14.0.bcr.1/MODULE.bazel": "22c31a561553727960057361aa33bf20fb2e98584bc4fec007906e27053f80c6",
@@ -141,7 +145,10 @@
     "https://bcr.bazel.build/modules/rules_cc/0.2.13/MODULE.bazel": "eecdd666eda6be16a8d9dc15e44b5c75133405e820f620a234acc4b1fdc5aa37",
     "https://bcr.bazel.build/modules/rules_cc/0.2.17/MODULE.bazel": "1849602c86cb60da8613d2de887f9566a6d354a6df6d7009f9d04a14402f9a84",
     "https://bcr.bazel.build/modules/rules_cc/0.2.17/source.json": "3832f45d145354049137c0090df04629d9c2b5493dc5c2bf46f1834040133a07",
+    "https://bcr.bazel.build/modules/rules_cc/0.2.4/MODULE.bazel": "1ff1223dfd24f3ecf8f028446d4a27608aa43c3f41e346d22838a4223980b8cc",
     "https://bcr.bazel.build/modules/rules_cc/0.2.8/MODULE.bazel": "f1df20f0bf22c28192a794f29b501ee2018fa37a3862a1a2132ae2940a23a642",
+    "https://bcr.bazel.build/modules/rules_distroless/0.8.0/MODULE.bazel": "a3e473943b685190e20668f5149f62a116fdcbeba66c7b9778f71d2aed4533c1",
+    "https://bcr.bazel.build/modules/rules_distroless/0.8.0/source.json": "a6931e20d97a13675693adb8b6cd3a0e6eb5218db43dfc83b75566ddc4158efc",
     "https://bcr.bazel.build/modules/rules_foreign_cc/0.9.0/MODULE.bazel": "c9e8c682bf75b0e7c704166d79b599f93b72cfca5ad7477df596947891feeef6",
     "https://bcr.bazel.build/modules/rules_fuzzing/0.5.2/MODULE.bazel": "40c97d1144356f52905566c55811f13b299453a14ac7769dfba2ac38192337a8",
     "https://bcr.bazel.build/modules/rules_img/0.3.12/MODULE.bazel": "6b7df1df94ee7ca59e9ce7d1b3454205e3ce5ee4e4add22207314bdc9a3fb280",
@@ -160,6 +167,7 @@
     "https://bcr.bazel.build/modules/rules_java/8.3.2/MODULE.bazel": "7336d5511ad5af0b8615fdc7477535a2e4e723a357b6713af439fe8cf0195017",
     "https://bcr.bazel.build/modules/rules_java/8.5.1/MODULE.bazel": "d8a9e38cc5228881f7055a6079f6f7821a073df3744d441978e7a43e20226939",
     "https://bcr.bazel.build/modules/rules_java/8.6.1/MODULE.bazel": "f4808e2ab5b0197f094cabce9f4b006a27766beb6a9975931da07099560ca9c2",
+    "https://bcr.bazel.build/modules/rules_java/8.8.0/MODULE.bazel": "de589d0880911ac007abd521b9f0ddcd8b0dbd05c8553e6f8124a050b83acf7d",
     "https://bcr.bazel.build/modules/rules_java/9.1.0/MODULE.bazel": "ee63f27e36a3fada80342869361182f120a9819c74320e8e65b1e04ba0cd7a9d",
     "https://bcr.bazel.build/modules/rules_java/9.1.0/source.json": "da589573c1dee2c9ac4a568b301269a2e8191110ff0345c1a959fa7ea6c4dfd6",
     "https://bcr.bazel.build/modules/rules_jvm_external/4.4.2/MODULE.bazel": "a56b85e418c83eb1839819f0b515c431010160383306d13ec21959ac412d2fe7",
@@ -229,11 +237,13 @@
     "https://bcr.bazel.build/modules/swift_argument_parser/1.3.1.2/source.json": "5fba48bbe0ba48761f9e9f75f92876cafb5d07c0ce059cc7a8027416de94a05b",
     "https://bcr.bazel.build/modules/tar.bzl/0.2.1/MODULE.bazel": "52d1c00a80a8cc67acbd01649e83d8dd6a9dc426a6c0b754a04fe8c219c76468",
     "https://bcr.bazel.build/modules/tar.bzl/0.5.1/MODULE.bazel": "7c2eb3dcfc53b0f3d6f9acdfd911ca803eaf92aadf54f8ca6e4c1f3aee288351",
+    "https://bcr.bazel.build/modules/tar.bzl/0.6.0/MODULE.bazel": "a3584b4edcfafcabd9b0ef9819808f05b372957bbdff41601429d5fd0aac2e7c",
     "https://bcr.bazel.build/modules/tar.bzl/0.7.0/MODULE.bazel": "cc1acd85da33c80e430b65219a620d54d114628df24a618c3a5fa0b65e988da9",
     "https://bcr.bazel.build/modules/tar.bzl/0.7.0/source.json": "9becb80306f42d4810bfa16379fb48aad0b01ce5342bc12fe47dcd6af3ac4d7a",
     "https://bcr.bazel.build/modules/upb/0.0.0-20220923-a547704/MODULE.bazel": "7298990c00040a0e2f121f6c32544bab27d4452f80d9ce51349b1a28f3005c43",
     "https://bcr.bazel.build/modules/yq.bzl/0.1.1/MODULE.bazel": "9039681f9bcb8958ee2c87ffc74bdafba9f4369096a2b5634b88abc0eaefa072",
-    "https://bcr.bazel.build/modules/yq.bzl/0.1.1/source.json": "2d2bad780a9f2b9195a4a370314d2c17ae95eaa745cefc2e12fbc49759b15aa3",
+    "https://bcr.bazel.build/modules/yq.bzl/0.3.1/MODULE.bazel": "9bcb7151b3cd4681b89d350530eaf7b45e32a44dda94843b8932b0cb1cd4594a",
+    "https://bcr.bazel.build/modules/yq.bzl/0.3.1/source.json": "f0b0f204a2a6b0e34b4c9541efe8c04f2ef1af65948daa784eccea738b21dbd2",
     "https://bcr.bazel.build/modules/zlib/1.2.11/MODULE.bazel": "07b389abc85fdbca459b69e2ec656ae5622873af3f845e1c9d80fe179f3effa0",
     "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.5/MODULE.bazel": "eec517b5bbe5492629466e11dae908d043364302283de25581e3eb944326c4ca",
     "https://bcr.bazel.build/modules/zlib/1.3.1.bcr.5/source.json": "22bc55c47af97246cfc093d0acf683a7869377de362b5d1c552c2c2e16b7a806",
@@ -349,9 +359,227 @@
           }
         }
       }
+    },
+    "@@yq.bzl+//yq:extensions.bzl%yq": {
+      "general": {
+        "bzlTransitiveDigest": "61Uz+o5PnlY0jJfPZEUNqsKxnM/UCLeWsn5VVCc8u5Y=",
+        "usagesDigest": "1CP5kLHwnlFZ3obmnV0eEOp+80JltkcSimeCHXe8/+E=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "yq_darwin_amd64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "darwin_amd64",
+              "version": "4.45.1"
+            }
+          },
+          "yq_darwin_arm64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "darwin_arm64",
+              "version": "4.45.1"
+            }
+          },
+          "yq_linux_amd64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "linux_amd64",
+              "version": "4.45.1"
+            }
+          },
+          "yq_linux_arm64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "linux_arm64",
+              "version": "4.45.1"
+            }
+          },
+          "yq_linux_s390x": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "linux_s390x",
+              "version": "4.45.1"
+            }
+          },
+          "yq_linux_riscv64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "linux_riscv64",
+              "version": "4.45.1"
+            }
+          },
+          "yq_linux_ppc64le": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "linux_ppc64le",
+              "version": "4.45.1"
+            }
+          },
+          "yq_windows_amd64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "windows_amd64",
+              "version": "4.45.1"
+            }
+          },
+          "yq_toolchains": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:toolchain.bzl%yq_toolchains_repo",
+            "attributes": {
+              "user_repository_name": "yq"
+            }
+          }
+        }
+      }
     }
   },
   "facts": {
+    "@@rules_img+//img:extensions.bzl%images": {
+      "oci_ref_graph@sha256:14dfc3dbd4975880379f228c3768c1d268668344819ae25e729d437725cb053c": {
+        "config": "sha256:175a6f84d8242e51c0e3c379f328427acf901f5bb4092aea8bf8491a8e40a527",
+        "kind": "manifest",
+        "layers": [
+          "sha256:3b4537f974e4ff8c99a4b1c348ec0cca202b4ba4c512240a6be6390582de95d8",
+          "sha256:2d2f2c7e6927507574770f33f85fb334e9f83ce10769ffae8e0a6c869656acf5"
+        ]
+      },
+      "oci_ref_graph@sha256:16b9029a0b6a5b401d5f8cb2147db155f28814f1f714ce9b99ae9caa4e5d5e06": {
+        "config": "sha256:dc3e824ad68f13408bbb1d29d212179d2560dcd990d6ffd020529d4ac8d4d239",
+        "kind": "manifest",
+        "layers": [
+          "sha256:4484c9e47560940cb9959e425297bc85533672149339f74185bc25ab28892bd8",
+          "sha256:2326d16c6ef3d845216f156acda0c7d63c7f01f19cf48920ad11c6604864a3f5"
+        ]
+      },
+      "oci_ref_graph@sha256:34a6902b60ccf87588179727366525161afdbe0d55f49d8de68925b1f3175870": {
+        "config": "sha256:72aa1f037350ec86b6e76055bdeb59fc16e3f981180ea85f567426a1fffb9a20",
+        "kind": "manifest",
+        "layers": [
+          "sha256:8ae2378435d99f39097aa4fd0d6c58c08445becca3153d53205b2cc5054b09c2",
+          "sha256:5140596476841d7fb1f8962ba135bf43dc2aa46b4214b880e136ffe44bdffcfc",
+          "sha256:c06b998886dee689807be4460dc0baf66baad034bf5d995f46251a47299fb86d",
+          "sha256:f0f4a8e0a8c2412ba596d00184f5f08af953c80ba9620e14810d0189403643e7"
+        ]
+      },
+      "oci_ref_graph@sha256:4181eb0137487812d8b84ee677de85e5c9f7e08b7c3e16fc564b077cff4907a8": {
+        "config": "sha256:bb5abedd27733a46736e0cf4e0de38e5e6276131c11fb6f129003324a21b036e",
+        "kind": "manifest",
+        "layers": [
+          "sha256:b9136609bef0128191aa157637b98dd7b98e52154ca60c18258d65957a01c6d0",
+          "sha256:70a4cf5323f3737e8219711d88392f78b1f738fc3a5924f411fc0c343edc0669",
+          "sha256:ca2c428672002b98ac5aa13d0ed5c4d7fe4ff1eeae90872e44a0b443c89088f2",
+          "sha256:2a87a541a2a8931e5cc0ded379c16bf8ce0df34b014f945d4905cd790b5d7aaf"
+        ]
+      },
+      "oci_ref_graph@sha256:6939dac8113efe9f213de434b824b2319f95d7fdec6758cb9ddf7f16be2b2a68": {
+        "config": "sha256:3bd08e4b341d24a4f8c1ed4151d73361bee23bc59a85b5df3d95baa3f9fd9be8",
+        "kind": "manifest",
+        "layers": [
+          "sha256:6ea28726ab979a7e4a20912de286f7f840030283954583a54db8454426c43814",
+          "sha256:ab47ec8222b981543a463178950366c3835e88eded4b441233eb8c5a7a57b71a"
+        ]
+      },
+      "oci_ref_graph@sha256:7151e2099af880ae26478211941a0913883f2afc7922ca061f7fd0d349c8bc84": {
+        "config": "sha256:4deb63593b1ba416d2e7550f9db13fb102ae0be0e8cdf6fe17934d8019c9e98e",
+        "kind": "manifest",
+        "layers": [
+          "sha256:99eb1512995af32b91c63bcd418e886af77e3c7ca088226161af558763425461",
+          "sha256:6b0c92df73d09c97efaed359c70865e4affa5b8bf5242254b7ea428625782e86",
+          "sha256:4348600772da3bc7815b19237e84489bb781213a1154ab3fb66076e6f7013cf2",
+          "sha256:13b63dd42ed0695c698e5d3494e6203d8e56145b478eb401fdfe61f224a7aa2a"
+        ]
+      },
+      "oci_ref_graph@sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf": {
+        "kind": "index",
+        "manifests": [
+          "sha256:4181eb0137487812d8b84ee677de85e5c9f7e08b7c3e16fc564b077cff4907a8",
+          "sha256:bc2e3f113b0750cdfde089d2af985f83d589fb86999a50d10651263325784703",
+          "sha256:7151e2099af880ae26478211941a0913883f2afc7922ca061f7fd0d349c8bc84",
+          "sha256:6939dac8113efe9f213de434b824b2319f95d7fdec6758cb9ddf7f16be2b2a68",
+          "sha256:34a6902b60ccf87588179727366525161afdbe0d55f49d8de68925b1f3175870",
+          "sha256:fdf267e6f691e32a912125510ae5a660b9840feebffe6ccce245c5a92110fe2e",
+          "sha256:d70e9890a759e4ab21856ee17a71c77a8d4331f7a2c3decb334a245e1c9bb565",
+          "sha256:a5b01ab5be6d08c1a1a3da18ca2534c007aa14ccafd1e96445c82a3c5c377d9e",
+          "sha256:88fcf3024d272ed39c97d64fa98016e5b776039177ee5575081c6ec23c3e22f8",
+          "sha256:7f6fce8b2ef7893d28b5af0f5563d5c723bb365958d6413922767627191542ae",
+          "sha256:b30d2fb8259d4ca3ddc9483afcae4c266c827078249642a4980520f62fda6bb8",
+          "sha256:16b9029a0b6a5b401d5f8cb2147db155f28814f1f714ce9b99ae9caa4e5d5e06",
+          "sha256:de619ba74e158bfff18e337e286c8cf7d9b19dcc53f1a6b9cf98748cbe5a3ff7",
+          "sha256:14dfc3dbd4975880379f228c3768c1d268668344819ae25e729d437725cb053c"
+        ]
+      },
+      "oci_ref_graph@sha256:7f6fce8b2ef7893d28b5af0f5563d5c723bb365958d6413922767627191542ae": {
+        "config": "sha256:64239c6e219d3b1414836617cae67245fb9e39e64ffaaac2f32e0a9f01808573",
+        "kind": "manifest",
+        "layers": [
+          "sha256:46d049c07da0dc94c87b7f82c7d7b2847abb6f466c2c84966c7fc19cb1b72239",
+          "sha256:c5cd5ac2c3670e8614da438a93439a3d0a79750d8cd464d72e927d15723c0e08"
+        ]
+      },
+      "oci_ref_graph@sha256:88fcf3024d272ed39c97d64fa98016e5b776039177ee5575081c6ec23c3e22f8": {
+        "config": "sha256:bc66bfdb3737424f22e1769e8d719dbb5473eaac485be7a3d5c904c33cbf5593",
+        "kind": "manifest",
+        "layers": [
+          "sha256:707460b758530d4476f3fefff30544db7cf8dbd98838ccc3533bc05e79016be4",
+          "sha256:b18b27c859a4b9f05ca7e4a0a96c9ebfe122b6e6213298415fdfb0c5b7d41824",
+          "sha256:c05afbaf5c807ba613ed13e5822abaddc4b22a37e78d1316fc130ab1bcb8c346",
+          "sha256:52b3a741d56916c16eb1b727d0d8a56708b744e6bb486c96586f4687c1a13618"
+        ]
+      },
+      "oci_ref_graph@sha256:a5b01ab5be6d08c1a1a3da18ca2534c007aa14ccafd1e96445c82a3c5c377d9e": {
+        "config": "sha256:e2645392c27eb246fc92a0ea55ad520dabce404a831d73bbfdb573523375cb81",
+        "kind": "manifest",
+        "layers": [
+          "sha256:7144440c525c95598e4f2c43672c7cfc4ae9e2335eb9caf9a803487a45c36abb",
+          "sha256:462274b2b3353c4053eac0cb1daaac3b168ab73a2d400a0e4b4fc956c38af7ae"
+        ]
+      },
+      "oci_ref_graph@sha256:b30d2fb8259d4ca3ddc9483afcae4c266c827078249642a4980520f62fda6bb8": {
+        "config": "sha256:a9d832e1032aa4d9c4b953b1d33d821866f13e09bdeb93df7db3949c2ccfdc5f",
+        "kind": "manifest",
+        "layers": [
+          "sha256:23f7cdee3ef2598b081c2b848fee95730a7ab2b1cc5b726c72dcb8c2fe3632f7",
+          "sha256:df23a1d621df44a13c57ed7248157ad455513f239ae5e25e6b29eaead6f702ee",
+          "sha256:89b3eb9be153a724b8c68ae96fc1b431c26fbc36d2e1a564971522ac3f6986ab",
+          "sha256:e7f3598d43e92950f71b3d9a4f225501317274f6432fbdf8aa85f8ed1a5e53cf"
+        ]
+      },
+      "oci_ref_graph@sha256:bc2e3f113b0750cdfde089d2af985f83d589fb86999a50d10651263325784703": {
+        "config": "sha256:d2dba195902b7092ddd86a4e336444d6a2a9402081486ad8b656594442033021",
+        "kind": "manifest",
+        "layers": [
+          "sha256:508315ae6622af8fd02ee41d623a3171132c8b141e5fb896d42d3269109f205e",
+          "sha256:bc966219723b8476fb486f0e84517e18e1066d2e712e88caaa5f236248225390"
+        ]
+      },
+      "oci_ref_graph@sha256:d70e9890a759e4ab21856ee17a71c77a8d4331f7a2c3decb334a245e1c9bb565": {
+        "config": "sha256:395cedd8627e84a5925e77221f71474f04be0a84341a7dbf628dd4a201f36302",
+        "kind": "manifest",
+        "layers": [
+          "sha256:402614bd39aaec1e4bdcf25aa67f88588fc8d93997a2551c4e130e6ed2b06c7a",
+          "sha256:67c635dcb557d9079eed487073482e4d26cafd64876a0163b352d31d4845110a",
+          "sha256:946f2656c94ddb9234ee895512da289a6bc74633eaef83ee4b9abef5a93c2a7b",
+          "sha256:09355c72fd7291318fd3fb571987225301681bd0daa95ce29164b0debf021737"
+        ]
+      },
+      "oci_ref_graph@sha256:de619ba74e158bfff18e337e286c8cf7d9b19dcc53f1a6b9cf98748cbe5a3ff7": {
+        "config": "sha256:c7789386d8d9c254d2d05f5dac354ff6f1e5da65b18f4475e38760f2fc28df46",
+        "kind": "manifest",
+        "layers": [
+          "sha256:6483bebe0f30256cfdd9c6f96373508f6b33d18b4bc61668ee641c700aa3108a",
+          "sha256:af79bdb71b2537606f616ffffe41e2d11fda0a6c2b10147073c3a3b967b60b7e",
+          "sha256:6a9e11c9dd2a6f19e4ea2ec911c7e41ee1a438b00ee39aded8241a40e0b409c9",
+          "sha256:03232e70533a23a1994da0a5981b99f21c566c4d0ce685db9912995034398b74"
+        ]
+      },
+      "oci_ref_graph@sha256:fdf267e6f691e32a912125510ae5a660b9840feebffe6ccce245c5a92110fe2e": {
+        "config": "sha256:b61ac23df90283676e9cec834da66daad03de989b243a7ec3c92df358e0726ce",
+        "kind": "manifest",
+        "layers": [
+          "sha256:c7c20d1c292d7d9bd3576574a30a964f8395fbf92a54e6a08e3e44061d65a737",
+          "sha256:03a6e6b86acb53236669ee95ed4e54096bcb8654f61c9892411d3eea25de599a"
+        ]
+      }
+    },
     "@@rules_python+//python/extensions:pip.bzl%pip": {
       "dist_hashes": {
         "https://pypi.org/simple": {

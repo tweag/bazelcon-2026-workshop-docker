@@ -19,6 +19,7 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "rules_distroless", version = "0.8.0")
 
 # --- Python toolchain ---
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
@@ -60,3 +61,13 @@ images.pull(
     tag = "3.12-slim-bookworm",
 )
 use_repo(images, "rules_img_images.bzl")
+
+# Hermetic Debian packages (the `dot` system dep as a pinned, content-addressed
+# layer) via rules_distroless. Regenerate the lock: bazel run @graphviz_apt//:lock
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    name = "graphviz_apt",
+    lock = "//samples/distroless:graphviz.lock.json",
+    manifest = "//samples/distroless:graphviz.yaml",
+)
+use_repo(apt, "graphviz_apt")

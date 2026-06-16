@@ -138,7 +138,9 @@ manifest + `oci_image` in
 > 1. Edit one line in `app.py`, rebuild → only the app layer rebuilds (watch the
 >    cache hits).
 > 2. `bazel run //samples/distroless:image_load && docker run --rm bwb/distroless`
->    → the PNG renders, with `dot` supplied by a **hermetic, pinned layer**.
+>    → runs `dot` (graphviz 2.43) from a **fully hermetic, pinned layer** built
+>    on scratch — no daemon, no `RUN apt-get`. (Wiring the plugin `config6` so
+>    it also *renders* is the documented follow-up in the sample.)
 > 3. Build two images sharing the base layer → it's built once.
 
 ---
@@ -203,7 +205,7 @@ tighten hermeticity incrementally · cross-arch → multi-platform indexes, no Q
 bazel build //...                         # images, slides, tools
 bazel test  //...                         # unit + structure + invariant tests
 bazel run //samples/python:image_load     # OCI image (no dot) -> Docker
-bazel run //samples/distroless:image_load # hermetic dot layer -> renders PNG
+bazel run //samples/distroless:image_load # hermetic, pinned `dot` (scratch)
 bazel run //samples/rules_img:load        # rules_img image -> Docker
 bazel run //benchmark/pytest_tax:compare  # the "docker tax" delta
 bazel run //tools:local_registry          # registry:2 on localhost:5000
