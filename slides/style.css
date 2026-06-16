@@ -142,6 +142,17 @@
 .slidev-layout.statement h1::after { background: var(--bc-cyan); }
 .slidev-layout.statement::after { color: var(--bc-cyan); }
 
+/* --- Module-divider (section) slides: navy surface ---------------------- */
+.slidev-layout.section {
+  background: linear-gradient(155deg, var(--bc-navy-deep), var(--bc-blue));
+  color: #eaf4fb;
+}
+.slidev-layout.section h1 {
+  color: #ffffff;
+}
+.slidev-layout.section h1::after { background: var(--bc-cyan); }
+.slidev-layout.section::after { color: var(--bc-cyan); }
+
 /* --- Legibility on the dark (cover + statement) surfaces ---------------- */
 .bazel-cover p,
 .slidev-layout.statement p {

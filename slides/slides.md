@@ -2,12 +2,12 @@
 theme: default
 title: Building Without Bytes
 info: |
-  ## Building Without Bytes
-  Orchestrating Containerized Workflows with Bazel — BazelCon 2026.
+  ## Building Without Bytes — 2h Workshop
+  High-Velocity Image Composition at Scale — BazelCon 2026.
 
   These slides are built by the same Bazel workspace that builds the
-  container images they describe. The code on screen is imported live from
-  the repo's real source files.
+  container images they describe. Code on screen is imported live from the
+  repo's real source files. Facilitator script: slides/content.md.
 class: text-center bazel-cover
 transition: slide-left
 mdc: true
@@ -17,7 +17,7 @@ mdc: true
 
 # Building Without Bytes
 
-### Orchestrating Containerized Workflows with Bazel
+### High-Velocity Image Composition at Scale · 2-hour workshop
 
 <div class="opacity-70 mt-8">
 
@@ -42,6 +42,57 @@ Same graph. Same cache. Same guarantees.
 If you can model a talk as a build artifact,<br>you can model your whole supply chain as one.
 
 ---
+layout: section
+---
+
+# Module 0 · Why: correct & hermetic
+<div class="opacity-60">15 min · Lab: clone + `bazel build //...`</div>
+
+---
+
+# Bazel's promise: {Fast, Correct}
+
+**Correct** means **hermetic** — a build with *no external influence*, so
+identical inputs always produce identical outputs.
+
+<div class="mt-4">
+
+Reproducibility isn't bolted on; it's the whole point. Everything in this
+workshop is a consequence of taking that seriously for **container images**.
+
+</div>
+
+---
+
+# Two kinds of hermeticity
+
+<div class="grid grid-cols-2 gap-6 mt-4">
+<div>
+
+### Docker
+**Runtime / deploy** hermeticity.<br>
+Bundles deps so the artifact runs the same everywhere.<br>
+But `docker build` itself is **not** hermetic — `RUN apt-get` is networked,
+timestamped, order-sensitive.
+
+</div>
+<div>
+
+### Bazel
+**Build** hermeticity.<br>
+Only declared inputs are visible; identical inputs → identical outputs.<br>
+Emits a reproducible, content-addressed artifact.
+
+</div>
+</div>
+
+<div class="mt-6 text-center opacity-80">
+
+Docker hermetizes the **deploy** boundary; Bazel the **build**. Want both.
+
+</div>
+
+---
 
 # The "black box" build
 
@@ -59,6 +110,13 @@ from pre-built, content-addressed artifacts. The filesystem becomes data.
 </div>
 
 ---
+layout: section
+---
+
+# Module 1 · A first declarative image
+<div class="opacity-60">20 min · Lab: build/run the image vs the Dockerfile</div>
+
+---
 
 # The "before": an imperative Dockerfile
 
@@ -74,7 +132,7 @@ an opaque, stateful layer. Editing `app.py` busts everything below the `COPY`.
 `graphviz` shells out to the `dot` binary — the apt dependency we must make
 explicit once we leave the daemon. The app renders the workshop's own graph:
 
-<<< ../samples/python/app.py#build_graph python {*}{maxHeight:'380px'}
+<<< ../samples/python/app.py#build_graph python {*}{maxHeight:'360px'}
 
 ---
 
@@ -83,42 +141,187 @@ explicit once we leave the daemon. The app renders the workshop's own graph:
 No daemon. The image is composed from content-addressed layers in the action
 graph; changing `app.py` reuses the base + deps layers untouched.
 
-<<< ../samples/python/BUILD.bazel#oci python {*}{maxHeight:'380px'}
+<<< ../samples/python/BUILD.bazel#oci python {*}{maxHeight:'360px'}
+
+---
+layout: section
+---
+
+# Module 2 · Hermeticity in practice
+<div class="opacity-60">20 min · Lab: the "docker tax" benchmark</div>
 
 ---
 
-# High-velocity incrementalism
+# Is Docker a good hermeticity validator?
 
-Architect layers by **volatility**, then rebuild only what changed:
+As a **negative test** — yes:
+
+```bash
+docker run --network=none --rm myscript   # fails if it needs the host/network
+```
+
+A pinned base with no network *surfaces undeclared dependencies*. But it's
+**not a proof** — build-time network, timestamps, and ordering still sneak in.
+
+<div class="mt-4">
+
+Bazel's **sandbox** is the stronger validator: it exposes only *declared*
+inputs, so a missing dependency fails the build — every time.
+
+</div>
+
+---
+
+# The "docker tax"
+
+Same suite, two ways — `py_test` (sandboxed, cached, incremental) vs. a
+`docker build` that pip-installs and runs pytest. Change one line, re-run:
+
+```bash
+bazel run //benchmark/pytest_tax:compare
+#   bazel test  (warm, after edit)    ~0.8 s
+#   docker build (warm, after edit)   ~2.2 s   ← per-edit "tax"
+#   docker build (cold, --no-cache)  ~11   s   ← upfront "make it hermetic" cost
+```
+
+Absolute numbers are machine-dependent; the **ratio per edit** is the point —
+and it grows with image size and dependency count.
+
+---
+layout: section
+---
+
+# Module 3 · Layer optimization
+<div class="opacity-60">30 min · Lab: layer split · dedup · distroless</div>
+
+---
+
+# Architect layers by volatility
+
+Order layers least → most volatile so rebuilds stay cheap:
 
 1. **Base OS** — static &nbsp;·&nbsp; 2. **Runtimes / deps** — infrequent &nbsp;·&nbsp; 3. **App code** — constant
 
-The 1-second rebuild — change one string in a multi-GB app:
+Change one string in a multi-GB app:
 
 ```bash
 $ docker build -t app .              # invalidates at COPY . /app → 2–3 min
 $ bazel run //samples/rules_img:load # re-assembles one blob   → seconds
 ```
 
-**`rules_oci` → `rules_img`:** skip `tar`/compression; a Go-based incremental
-loader keeps layers as transparent blobs until final assembly.
+Bazel re-assembles only the changed layer — and uploads only that blob.
 
 ---
 
-# Daemonless & verifiable
+# Action deduplication
 
-No `/var/run/docker.sock`. Build on restricted CI runners (no root), on
-macOS / Windows without a VM, side-by-side with every other Bazel action.
+Bazel's action cache keys every action on **input digests + command + env** →
+identical action, built **once**.
 
-Test **without running** the container — structure checks in the sandbox:
+<div class="mt-4">
+
+Layers are **content-addressed**, so the win compounds:
+
+- a shared base/deps layer is **built once**, reused across *every* image;
+- at the registry, an existing blob is **skipped on push**.
+
+</div>
+
+<div class="mt-4 opacity-80">
+
+Optimization = make common layers **byte-identical**, and dedup does the rest.
+
+</div>
+
+---
+
+# rules_distroless: hermetic system deps
+
+Remember the `dot` gap? Replace `RUN apt-get install graphviz` with a **pinned
+manifest + lockfile** — Bazel materializes `dot` + its `.deb`s as
+content-addressed layers. No network at build, no daemon, no `RUN`.
 
 ```python
-container_structure_test(
-    name = "structure_test",
-    image = ":image",
-    configs = ["test_config.yaml"],
-)
+# MODULE.bazel
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(name = "graphviz_apt",
+            manifest = "//samples/distroless:graphviz.yaml",
+            lock = "//samples/distroless:graphviz.lock.json")
 ```
+
+Bonus: **no shell, no package manager** → smaller image, smaller attack surface.
+
+---
+layout: section
+---
+
+# Module 4 · Push operations
+<div class="opacity-60">20 min · Lab: push to a local registry</div>
+
+---
+
+# Daemonless push — only the changed blobs
+
+`rules_oci` → `oci_push`; `rules_img` → `image_push`. No daemon. Both upload
+**only blobs the registry lacks** — the dedup from Module 3 now pays off as
+**bandwidth**: a shared base layer uploads once.
+
+```bash
+bazel run //tools:local_registry          # registry:2 on localhost:5000
+bazel run //samples/rules_oci:push         # push (changed blobs only)
+bazel run //samples/rules_img:push         # same image, rules_img
+```
+
+Push a multi-arch **index** (`linux/amd64` + `linux/arm64/v8`) — no QEMU-in-Docker.
+
+---
+layout: section
+---
+
+# Module 5 · rules_img & shipping choices
+<div class="opacity-60">15 min · wrap-up + Q&A</div>
+
+---
+
+# Same artifact, three philosophies
+
+| Feature | Dockerfile | rules_oci | rules_img |
+|---|---|---|---|
+| **Execution** | Imperative | Declarative | Optimized declarative |
+| **Hermetic** | No | Yes | Yes |
+| **Speed** | Slow (cache miss) | Fast | Ultra-fast |
+| **Daemon req.** | Yes | No | No |
+| **Tar-less** | No | No | Yes |
+
+`rules_img` skips `tar`/compression and uses a Go-based incremental loader —
+layers stay transparent blobs until final assembly.
+
+---
+
+# Ship as Docker, or as source?
+
+<div class="grid grid-cols-2 gap-6 mt-4">
+<div>
+
+### Docker image
+Self-contained, immutable, content-addressed, scannable, rollback-able.<br>
+Carries **deploy hermeticity**.
+
+</div>
+<div>
+
+### Source only
+Smaller to transfer — but pushes non-hermeticity onto the consumer's build
+("works on my machine" returns).
+
+</div>
+</div>
+
+<div class="mt-6 text-center opacity-80">
+
+With Bazel you emit **both from one graph** — choose per audience.
+
+</div>
 
 ---
 layout: two-cols
@@ -145,21 +348,6 @@ bazel run //tools:render_graph \
      alt="dependency graph of //samples/python:image" />
 
 ---
-
-# Same artifact, three philosophies
-
-| Feature | Dockerfile | rules_oci | rules_img |
-|---|---|---|---|
-| **Execution** | Imperative | Declarative | Optimized declarative |
-| **Hermetic** | No | Yes | Yes |
-| **Speed** | Slow (cache miss) | Fast | Ultra-fast |
-| **Daemon req.** | Yes | No | No |
-| **Tar-less** | No | No | Yes |
-
-The further right, the more your build behaves like the rest of your Bazel
-graph: deterministic, cacheable, daemonless.
-
----
 layout: center
 class: text-center
 ---
@@ -170,7 +358,7 @@ class: text-center
 **Architect for layers** — heavy deps apart from volatile code.<br>
 **Go daemonless** — better CI security and portability.<br>
 **Evaluate `rules_img`** — if `tar` is the bottleneck, upgrade.<br>
-**Slide-as-Code** — the deck is just another build target; benchmark your own images.
+**Slide-as-Code** — the deck is just another build target.
 
 <div class="mt-8 opacity-70">
 
