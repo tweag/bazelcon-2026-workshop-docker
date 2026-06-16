@@ -111,6 +111,19 @@ A clean `git clone && bazel build //...` produces:
     slides graph artifact) as a stretch goal.
     - ✅ **Artefact:** [`tools/render_graph.py`](tools/render_graph.py) → `//tools:render_graph`
       (renders its own node + [`slides/graphs/samples_python-image.png`](slides/graphs/samples_python-image.png))
+11. [x] **`samples/distroless/`** — the `dot` system dep made **hermetic** via
+    `rules_distroless`: a pinned manifest + lockfile (162 transitive `.deb`s)
+    materialize `dot` as a content-addressed layer — no network at build, no
+    daemon, no `RUN apt-get`. Refines task 9's "system-dep layer".
+    - ✅ **Artefact:** [`samples/distroless/`](samples/distroless/) →
+      `//samples/distroless:image` (built on scratch; verified `docker run` →
+      "dot - graphviz version 2.43.0"). _Follow-ups (noted in BUILD): plugin
+      `config6` for rendering; merged-usr conflict when layering onto a slim base._
+12. [x] **Registry push** — `oci_push` + `image_push` to a local `registry:2`.
+    - ✅ **Artefact:** `//samples/rules_oci:push`, `//samples/rules_img:push`,
+      [`tools/local_registry.sh`](tools/local_registry.sh) →
+      `//tools:local_registry`. Verified: both push; shared base blobs dedupe
+      at the registry ("from container registry" / "existing blob").
 
 ## 3. Presentation (`//slides/...` — "Slide-as-Code")
 
@@ -170,14 +183,22 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
 
 ## 4. Benchmark target (`//benchmark/...`)
 
-1. [ ] A runnable target that times the `Dockerfile` build vs. the Bazel/OCI
+1. [x] A runnable target that times the `Dockerfile` build vs. the Bazel/OCI
    build, cold and warm cache, and reports the deltas.
-2. [ ] Reproducible: documents exactly what is measured so attendees can run
+   - ✅ **Artefact:** [`benchmark/pytest_tax/`](benchmark/pytest_tax/) →
+     `//benchmark/pytest_tax:compare` — the "docker tax": same unittest suite
+     via Bazel `py_test` vs. pytest-in-Docker; prints warm (per-edit) + cold
+     deltas. _(Test-iteration tax; an image-build-time benchmark is a follow-up.)_
+2. [x] Reproducible: documents exactly what is measured so attendees can run
    it on their own images. This is takeaway #2 in `PROPOSAL.md`.
+   - ✅ **Artefact:** `compare.sh` header + content.md Module 2; uses a
+     dedicated `--output_base` (warm) reusing `--disk_cache`.
 3. [ ] Harness test: the benchmark runs end-to-end and emits parseable
    output with the expected fields (cold/warm, deltas). Assert structure
    and that it completes — NOT specific timing thresholds, which are
    machine-dependent and would make the test flaky.
+   - ↳ _`compare` is a verified run target; an automated `*_test` wrapper is
+     still to add._
 
 ## 5. Testing & CI
 
@@ -223,6 +244,23 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
    deck.
    - ✅ **Artefact:** [`README.md`](README.md) →
      `https://akafael.github.io/bazelcon2026-docker-build-workshop/`
+
+## 7. 2-hour workshop format
+
+Reframe the deck + notes from a conference talk into a 6-module, ~120-min
+hands-on workshop (basics → layer optimization → push), with a Lab per module.
+
+1. [x] `slides/content.md` — full facilitator script: run sheet + six timed
+   modules + a Lab each, weaving the 7 conceptual answers (mantra, runtime-vs-
+   build hermeticity, Docker as a negative test, rules_distroless, action
+   dedup, the "docker tax", ship-Docker-vs-source).
+   - ✅ **Artefact:** [`slides/content.md`](slides/content.md)
+2. [x] `slides/slides.md` — deck restructured (24 slides) with `layout: section`
+   module dividers + concept/lab slides; on-brand BazelCon palette.
+   - ✅ **Artefact:** [`slides/slides.md`](slides/slides.md) +
+     [`slides/style.css`](slides/style.css) → [`docs/building-without-bytes.pdf`](docs/building-without-bytes.pdf)
+3. [x] Runnable samples backing the labs: distroless (§2.11), the "docker tax"
+   benchmark (§4.1), and registry push (§2.12).
 
 ## Acceptance criteria
 
