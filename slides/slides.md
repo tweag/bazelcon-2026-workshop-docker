@@ -149,7 +149,8 @@ graph; changing `app.py` reuses the base + deps layers untouched.
 oci_image(name = "image", base = "@python_base",
           tars = [":app_layer"], entrypoint = ["/app/app"])
 oci_load(name = "image_load", image = ":image", repo_tags = ["bwb/app:latest"])
-oci_push(name = "push", image = ":image", repository = "localhost:5000/bwb/app")
+oci_push(name = "push", image = ":image",
+         repository = "localhost:5000/bwb/app", remote_tags = ["latest"])
 ```
 
 ---
@@ -210,7 +211,7 @@ layout: section
 
 Order layers least → most volatile so rebuilds stay cheap:
 
-1. **Base OS** — static &nbsp;·&nbsp; 2. **Runtimes / deps** — infrequent &nbsp;·&nbsp; 3. **App code** — constant
+1. **Base OS** — static &nbsp;·&nbsp; 2. **Runtimes / deps** — infrequent &nbsp;·&nbsp; 3. **App code** — most volatile
 
 Change one string in a multi-GB app:
 
@@ -309,7 +310,8 @@ bazel run //samples/rules_oci:push         # push (changed blobs only)
 bazel run //samples/rules_img:push         # same image, rules_img
 ```
 
-Push a multi-arch **index** (`linux/amd64` + `linux/arm64/v8`) — no QEMU-in-Docker.
+The base is pulled **multi-arch** (`linux/amd64` + `linux/arm64/v8`); building an
+image *index* to push both is a one-liner — no QEMU-in-Docker.
 
 ---
 layout: section
@@ -404,6 +406,6 @@ bazel run //tools:render_graph \
 
 ::right::
 
-<img src="./graphs/dogfooding.png"
+<img src="./graphs/samples_python-image.png"
      class="max-h-72 object-contain"
      alt="first-party dependency graph of //samples/python:image" />

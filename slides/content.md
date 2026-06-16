@@ -126,7 +126,7 @@ them. The point is the **order of magnitude** per edit."
 
 **Architect by volatility.** Order layers least → most volatile so rebuilds stay
 cheap: **1. Base OS** (static) · **2. runtimes/deps** (infrequent) · **3. app
-code** (constant). Bazel re-assembles only the changed layer.
+code** (most volatile). Bazel re-assembles only the changed layer.
 
 **Action deduplication [Q5].** "Bazel's action cache keys every action on
 **input digests + command + environment**. Identical action → built once,
@@ -140,7 +140,8 @@ layers so the common ones are **byte-identical**, and dedup does the rest."
 OS** and any **byte-identical** layer (deps, config). Concretely:
 `//samples/shared_layers` builds `image_a` and `image_b` on the same base + a
 common layer — `bazel run //samples/shared_layers:digests` prints the shared
-blob digests (5 shared, 1 unique app layer each)."
+blob digests (the base layers + the common layer are shared; each image adds one
+unique app layer)."
 
 **rules_distroless: hermetic system deps [Q4].** "Remember the `dot` gap?
 Here's the fix. Instead of `RUN apt-get install graphviz`, we declare the
@@ -174,14 +175,15 @@ manifest + `oci_image` in
 registry doesn't already have** — the content-addressed dedup from Module 3 now
 pays off as **bandwidth**: a base/deps layer shared across images uploads once."
 
-**Multi-arch.** Push an image *index* (`linux/amd64` + `linux/arm64/v8`) built
-without QEMU-in-Docker.
+**Multi-arch.** The base is pulled multi-arch (`linux/amd64` + `linux/arm64/v8`);
+building an image *index* to push both is a one-liner — no QEMU-in-Docker.
 
 > **Lab 4 (10m):**
 > 1. `bazel run //tools:local_registry` → starts `registry:2` on `localhost:5000`.
-> 2. `bazel run //samples/rules_oci:push` and `//samples/rules_img:push`.
-> 3. Push a second image that shares the base layer → watch the shared blob
->    report as already present (skipped).
+> 2. `bazel run //samples/rules_oci:push`, then `//samples/rules_img:push`.
+>    They share the base + `app_layer`, so the **second push reports those blobs
+>    as already present** — registry dedup is by content digest, even across
+>    repositories. (Observed: "N from container registry" / "existing blob".)
 
 ---
 
