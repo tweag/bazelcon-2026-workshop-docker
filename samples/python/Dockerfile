@@ -1,15 +1,7 @@
 # The "before": a traditional, imperative Dockerfile build (TASK §2.2).
-#
-# Note the system dependency handled the daemon way: `apt-get install graphviz`
-# in a RUN layer. It works, but the layer is an opaque blob produced by a
-# stateful daemon, and editing app.py below busts every layer after the COPY.
-# Compare with //samples/python:image, where the same dependency is a
-# declarative, content-addressed layer in the Bazel action graph.
-#
-# Build & run:
-#   docker build -t bwb/python-graphviz-dockerfile samples/python
-#   docker run --rm bwb/python-graphviz-dockerfile   # renders the PNG
+# Why it matters and how the Bazel variants compare: see samples/README.md.
 
+#region dockerfile
 FROM python:3.12-slim-bookworm
 
 # System dependency: the `dot` binary. Imperative, daemon-run, cache-coarse.
@@ -26,3 +18,4 @@ WORKDIR /app
 COPY app.py /app/app.py
 
 ENTRYPOINT ["python", "/app/app.py", "--render", "/tmp/supply_chain.png"]
+#endregion

@@ -130,7 +130,7 @@ layout: section
 The Docker daemon installs the `dot` system dependency with `RUN apt-get` —
 an opaque, stateful layer. Editing `app.py` busts everything below the `COPY`.
 
-<<< ../samples/python/Dockerfile docker {14-28}
+<<< ../samples/python/Dockerfile#dockerfile docker
 
 ---
 
