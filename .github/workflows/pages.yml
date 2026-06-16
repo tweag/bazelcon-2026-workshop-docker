@@ -1,7 +1,9 @@
 name: pages
 
 # Build the Slidev deck and publish it to GitHub Pages (TASK §6).
-# One-time setup: repo Settings → Pages → Source = "GitHub Actions".
+# The build job enables Pages itself (actions/configure-pages enablement: true),
+# so no manual Settings toggle is needed when the token is permitted; if your
+# org restricts that, set Settings → Pages → Source = "GitHub Actions" once.
 
 on:
   push:
@@ -24,6 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Enable Pages (Source = GitHub Actions) from the workflow itself.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
