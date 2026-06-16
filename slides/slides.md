@@ -343,9 +343,9 @@ bazel run //tools:render_graph \
 
 ::right::
 
-<img src="./graphs/samples_python-image.png"
-     class="rounded shadow max-h-100 object-contain"
-     alt="dependency graph of //samples/python:image" />
+<img src="./graphs/dogfooding.png"
+     class="max-h-72 object-contain"
+     alt="first-party dependency graph of //samples/python:image" />
 
 ---
 layout: center
