@@ -1,0 +1,31 @@
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+# The "docker tax" benchmark (TASK §4): the same unittest suite run under Bazel
+# vs. pytest-in-Docker, to measure the per-edit iteration cost of containerizing
+# for hermeticity.
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["calc.py", "calc_test.py", "marker.txt", "Dockerfile"])
+
+py_library(
+    name = "calc",
+    srcs = ["calc.py"],
+    imports = ["."],
+)
+
+py_test(
+    name = "tests",
+    size = "small",
+    srcs = ["calc_test.py"],
+    main = "calc_test.py",
+    data = ["marker.txt"],  # changing it forces a re-run, mirroring a code edit
+    imports = ["."],
+    deps = [":calc"],
+)
+
+# bazel run //benchmark/pytest_tax:compare  -> prints Bazel-vs-Docker timings.
+sh_binary(
+    name = "compare",
+    srcs = ["compare.sh"],
+)
