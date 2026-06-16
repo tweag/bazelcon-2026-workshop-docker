@@ -1,21 +1,24 @@
 /* BazelCon 2026 theme for "Building Without Bytes".
  *
- * Modeled on the BazelCon / Linux Foundation events look: clean LIGHT slides,
- * dark-navy text, a teal/cyan accent, a deep-blue hero, modern sans-serif.
- * (The site's exact hex codes aren't published; tune the tokens below if you
- * have the brand values.) Auto-loaded by Slidev over @slidev/theme-default. */
+ * Official BazelCon 2026 palette:
+ *   Deep Forest Green #14552F — primary brand / banners / dark surfaces
+ *   Vivid Lime Green  #7CB342 — accents, graphics, active elements
+ *   Crisp White       #FFFFFF — content background
+ *   Charcoal Text     #333333 — body copy
+ *   Hyperlink Blue    #1A73E8 — links only
+ * Auto-loaded by Slidev over @slidev/theme-default. */
 
 :root {
-  --bc-navy: #102a4c;        /* primary text / headings */
-  --bc-navy-deep: #0a1f3c;   /* hero / dark surfaces */
-  --bc-blue: #1c4e8a;        /* secondary blue */
-  --bc-teal: #14b8c4;        /* accent */
-  --bc-cyan: #5fd6e0;        /* light accent */
-  --bc-bg: #ffffff;          /* slide background */
-  --bc-bg-soft: #f5f8fb;     /* panels / code */
-  --bc-ink-soft: #3a4a63;    /* body text */
+  --bc-forest: #14552f;       /* primary brand / banners / dark surfaces */
+  --bc-forest-deep: #0e3d22;  /* darker forest for gradients */
+  --bc-lime: #7cb342;         /* accent / graphics */
+  --bc-lime-light: #a5d06e;   /* lighter lime */
+  --bc-bg: #ffffff;           /* content slide background */
+  --bc-bg-soft: #f4f7f1;      /* panels / code on light slides */
+  --bc-ink: #333333;          /* charcoal body copy */
+  --bc-link: #1a73e8;         /* hyperlink blue — links only */
 
-  --slidev-theme-primary: var(--bc-teal);
+  --slidev-theme-primary: var(--bc-lime);
 
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
@@ -23,10 +26,10 @@
 /* Light, clean content slides. */
 .slidev-layout {
   background: var(--bc-bg);
-  color: var(--bc-ink-soft);
+  color: var(--bc-ink);
 }
 
-/* Teal accent bar across the top of content slides. */
+/* Lime accent bar across the top of content slides. */
 .slidev-layout::before {
   content: '';
   position: absolute;
@@ -34,7 +37,7 @@
   left: 0;
   right: 0;
   height: 5px;
-  background: linear-gradient(90deg, var(--bc-teal), var(--bc-cyan) 60%, var(--bc-blue));
+  background: linear-gradient(90deg, var(--bc-lime), var(--bc-lime-light) 60%, var(--bc-forest));
 }
 
 /* Persistent BazelCon footer mark (skipped on the cover). */
@@ -45,13 +48,13 @@
   right: 1.1rem;
   font-size: 0.7rem;
   letter-spacing: 0.03em;
-  color: var(--bc-blue);
+  color: var(--bc-forest);
   opacity: 0.6;
 }
 
-/* Headings in navy, with a teal kicker under H1. */
+/* Headings in forest green, with a lime kicker under H1. */
 .slidev-layout h1 {
-  color: var(--bc-navy);
+  color: var(--bc-forest);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -62,58 +65,58 @@
   height: 4px;
   margin-top: 0.4rem;
   border-radius: 2px;
-  background: var(--bc-teal);
+  background: var(--bc-lime);
 }
 .slidev-layout h2,
 .slidev-layout h3 {
-  color: var(--bc-blue);
+  color: var(--bc-forest);
 }
 .slidev-layout a {
-  color: var(--bc-teal);
-  text-decoration-color: var(--bc-cyan);
+  color: var(--bc-link);  /* hyperlink blue — links only */
+  text-decoration-color: var(--bc-link);
 }
 .slidev-layout strong {
-  color: var(--bc-navy);
+  color: var(--bc-forest);
 }
 
-/* Inline code: soft teal tint on navy. */
+/* Inline code: forest on a soft lime tint. */
 .slidev-layout :not(pre) > code {
-  color: var(--bc-navy);
-  background: rgba(20, 184, 196, 0.12);
+  color: var(--bc-forest);
+  background: rgba(124, 179, 66, 0.16);
   border-radius: 4px;
   padding: 0.1em 0.35em;
 }
 
-/* Code-fence frames echo the accent. */
+/* Code-fence frames echo the lime accent. */
 .slidev-layout pre.slidev-code,
 .slidev-layout .slidev-code-wrapper pre {
-  border: 1px solid rgba(20, 184, 196, 0.28);
-  border-left: 4px solid var(--bc-teal);
+  border: 1px solid rgba(124, 179, 66, 0.35);
+  border-left: 4px solid var(--bc-lime);
   border-radius: 8px;
   background: var(--bc-bg-soft);
 }
 
-/* --- Cover slide: deep-blue hero ---------------------------------------- */
+/* --- Cover slide: deep forest green hero -------------------------------- */
 .bazel-cover {
   background:
-    radial-gradient(70% 90% at 82% 8%, rgba(95, 214, 224, 0.22), transparent),
-    linear-gradient(155deg, var(--bc-navy-deep), #123a6b 75%, #0d2c52);
-  color: #eaf4fb;
+    radial-gradient(70% 90% at 82% 8%, rgba(124, 179, 66, 0.22), transparent),
+    linear-gradient(155deg, var(--bc-forest-deep), var(--bc-forest) 75%, #103f23);
+  color: #eaf6e8;
 }
 .bazel-cover::before { height: 0; } /* no top bar on the cover */
 .bazel-cover h1 {
   color: #ffffff;
 }
 .bazel-cover h1::after {
-  background: var(--bc-cyan);
+  background: var(--bc-lime);
   margin-left: auto;
   margin-right: auto;
 }
 .bazel-cover h3 {
-  color: var(--bc-cyan);
+  color: var(--bc-lime-light);
 }
 
-/* Geometric blocks motif (architectural nod), in the BazelCon palette. */
+/* Geometric blocks motif (a nod to the Bazel logo), in lime/forest. */
 .bazel-blocks {
   display: inline-grid;
   grid-template-columns: repeat(2, 1fr);
@@ -125,45 +128,54 @@
   width: 24px;
   height: 24px;
   border-radius: 5px;
-  background: var(--bc-teal);
+  background: var(--bc-lime);
 }
-.bazel-blocks i:nth-child(1) { background: var(--bc-cyan); }
-.bazel-blocks i:nth-child(4) { background: var(--bc-blue); }
+.bazel-blocks i:nth-child(1) { background: var(--bc-lime-light); }
+.bazel-blocks i:nth-child(4) { background: var(--bc-forest); }
 
-/* --- Statement layout: navy surface ------------------------------------- */
-.slidev-layout.statement {
-  background: linear-gradient(155deg, var(--bc-navy-deep), var(--bc-blue));
-  color: #eaf4fb;
-}
-.slidev-layout.statement h1,
-.slidev-layout.statement h2 {
-  color: var(--bc-cyan);
-}
-.slidev-layout.statement h1::after { background: var(--bc-cyan); }
-.slidev-layout.statement::after { color: var(--bc-cyan); }
-
-/* --- Module-divider (section) slides: navy surface ---------------------- */
+/* --- Module-divider (section) slides: forest banner --------------------- */
 .slidev-layout.section {
-  background: linear-gradient(155deg, var(--bc-navy-deep), var(--bc-blue));
-  color: #eaf4fb;
+  background: linear-gradient(155deg, var(--bc-forest-deep), var(--bc-forest));
+  color: #eaf6e8;
 }
 .slidev-layout.section h1 {
   color: #ffffff;
 }
-.slidev-layout.section h1::after { background: var(--bc-cyan); }
-.slidev-layout.section::after { color: var(--bc-cyan); }
+.slidev-layout.section h1::after { background: var(--bc-lime); }
+.slidev-layout.section::after { color: var(--bc-lime-light); }
 
-/* --- Legibility on the dark (cover + statement) surfaces ---------------- */
+/* --- Statement layout: forest surface ----------------------------------- */
+.slidev-layout.statement {
+  background: linear-gradient(155deg, var(--bc-forest-deep), var(--bc-forest));
+  color: #eaf6e8;
+}
+.slidev-layout.statement h1,
+.slidev-layout.statement h2 {
+  color: var(--bc-lime-light);
+}
+.slidev-layout.statement h1::after { background: var(--bc-lime); }
+.slidev-layout.statement::after { color: var(--bc-lime-light); }
+
+/* --- Legibility on the dark (cover / section / statement) surfaces ------ */
 .bazel-cover p,
+.slidev-layout.section p,
 .slidev-layout.statement p {
-  color: #d7e8f5;
+  color: #dcecd6;
 }
 .bazel-cover strong,
+.slidev-layout.section strong,
 .slidev-layout.statement strong {
   color: #ffffff;
 }
+.bazel-cover a,
+.slidev-layout.section a,
+.slidev-layout.statement a {
+  color: var(--bc-lime-light);
+  text-decoration-color: var(--bc-lime-light);
+}
 .bazel-cover :not(pre) > code,
+.slidev-layout.section :not(pre) > code,
 .slidev-layout.statement :not(pre) > code {
-  color: #eaf4fb;
-  background: rgba(95, 214, 224, 0.22);
+  color: #eaf6e8;
+  background: rgba(124, 179, 66, 0.24);
 }
