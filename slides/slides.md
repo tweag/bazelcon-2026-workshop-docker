@@ -2,12 +2,17 @@
 theme: default
 title: Building Without Bytes
 info: |
-  ## Building Without Bytes — 2h Workshop
-  High-Velocity Image Composition at Scale — BazelCon 2026.
+  ## Building Without Bytes — 90-min workshop (9:00–10:30)
+  High-Velocity Image Composition at Scale — BazelCon 2026 · Rafael Lima.
+  Sponsored by Tweag by Modus Create.
 
-  These slides are built by the same Bazel workspace that builds the
-  container images they describe. Code on screen is imported live from the
-  repo's real source files. Facilitator script: slides/content.md.
+  A graph-based approach to containerization: with Bazel, rules_oci, and
+  rules_img we treat container layers as pure, declarative artifacts —
+  assembling images in seconds, independent of a local Docker daemon, so what
+  you build in CI is byte-for-byte identical to what runs in production.
+
+  These slides are built by the same Bazel workspace that builds the images
+  they describe; code on screen is imported live. Script: slides/content.md.
 class: text-center bazel-cover
 transition: slide-left
 mdc: true
@@ -17,16 +22,18 @@ mdc: true
 
 # Building Without Bytes
 
-### High-Velocity Image Composition at Scale · 2-hour workshop
+### High-Velocity Image Composition at Scale
 
-<div class="opacity-70 mt-8">
+<div class="opacity-70 mt-6">
 
 These slides were not exported from an app — they were **built by Bazel**,
 from the same workspace that builds the containers they describe.
 
 </div>
 
-<div class="abs-br m-6 opacity-50 text-sm">BazelCon 2026 · Rafael Lima</div>
+<div class="opacity-80 mt-6 text-sm">Sponsored by <strong>Tweag by Modus Create</strong></div>
+
+<div class="abs-br m-6 opacity-50 text-sm">BazelCon 2026 · 9:00–10:30 · Rafael Lima</div>
 
 ---
 layout: statement
@@ -39,14 +46,14 @@ layout: statement
 
 Same graph. Same cache. Same guarantees.
 
-If you can model a talk as a build artifact,<br>you can model your whole supply chain as one.
+What you build is byte-for-byte what runs in production —<br>starting with the deck you're watching.
 
 ---
 layout: section
 ---
 
 # Module 0 · Why: correct & hermetic
-<div class="opacity-60">15 min · Lab: clone + `bazel build //...`</div>
+<div class="opacity-60">10 min · Lab: clone + `bazel build //...`</div>
 
 ---
 
@@ -114,7 +121,7 @@ layout: section
 ---
 
 # Module 1 · A first declarative image
-<div class="opacity-60">20 min · Lab: build/run the image vs the Dockerfile</div>
+<div class="opacity-60">15 min · Lab: build/run the image vs the Dockerfile</div>
 
 ---
 
@@ -148,7 +155,7 @@ layout: section
 ---
 
 # Module 2 · Hermeticity in practice
-<div class="opacity-60">20 min · Lab: the "docker tax" benchmark</div>
+<div class="opacity-60">15 min · Lab: the "docker tax" benchmark</div>
 
 ---
 
@@ -192,7 +199,7 @@ layout: section
 ---
 
 # Module 3 · Layer optimization
-<div class="opacity-60">30 min · Lab: layer split · dedup · distroless</div>
+<div class="opacity-60">25 min · Lab: layer split · dedup · distroless</div>
 
 ---
 
@@ -256,7 +263,7 @@ layout: section
 ---
 
 # Module 4 · Push operations
-<div class="opacity-60">20 min · Lab: push to a local registry</div>
+<div class="opacity-60">15 min · Lab: push to a local registry</div>
 
 ---
 
@@ -279,7 +286,7 @@ layout: section
 ---
 
 # Module 5 · rules_img & shipping choices
-<div class="opacity-60">15 min · wrap-up + Q&A</div>
+<div class="opacity-60">10 min · wrap-up + Q&A</div>
 
 ---
 

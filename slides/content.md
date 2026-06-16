@@ -1,33 +1,42 @@
-# Building Without Bytes — 2-Hour Workshop Script
+# Building Without Bytes — 90-Minute Workshop Script
 
 Full facilitator script for the BazelCon 2026 workshop **"Building Without
-Bytes: High-Velocity Image Composition at Scale."** This is the source of truth
-for what the workshop *says and does*; [`slides.md`](slides.md) is the projected
-deck. The workshop ramps from first principles → layer optimization → registry
-push, with a hands-on **Lab** in every module. Source outline:
-[`../ref/draft.md`](../ref/draft.md) · Proposal: [`../PROPOSAL.md`](../PROPOSAL.md).
+Bytes: High-Velocity Image Composition at Scale."**
+**9:00–10:30 · Instructor: Rafael Lima · Sponsored by Tweag by Modus Create.**
 
-> Thesis: if you can model a conference talk as a build artifact, you can model
-> your whole software supply chain as one — and these slides prove it (built by
-> the same `bazel build` as the images they describe).
+This is the source of truth for what the workshop *says and does*;
+[`slides.md`](slides.md) is the projected deck. The workshop ramps from first
+principles → layer optimization → registry push, with a hands-on **Lab** in
+every module. Source outline: [`../ref/draft.md`](../ref/draft.md) · Proposal:
+[`../PROPOSAL.md`](../PROPOSAL.md).
 
-**Format:** ~120 min, 6 modules, each = short concept + a Lab. Attendees clone
+> **Abstract.** In modern CI/CD the traditional `docker build` is often the
+> slowest link: imperative, sequential Dockerfiles struggle with cache
+> invalidation and lack the fine-grained dependency tracking large monorepos
+> need. This workshop takes a **graph-based** approach — with Bazel,
+> `rules_oci`, and `rules_img` we treat container layers as pure, declarative
+> artifacts, assembling images in seconds, independent of a local Docker
+> daemon. Attendees move from legacy "black box" builds to a transparent,
+> content-addressable architecture so that **what you build in CI is
+> byte-for-byte identical to what runs in production**.
+
+**Format:** ~90 min, 6 modules, each = short concept + a Lab. Attendees clone
 the repo and run real targets.
 
 **Run sheet**
 
 | # | Module | Time | Lab |
 |---|--------|------|-----|
-| 0 | Why: correct & hermetic | 15m | clone + `bazel build //...` |
-| 1 | Basics: a first declarative image | 20m | build/run image vs Dockerfile |
-| 2 | Hermeticity in practice | 20m | the "docker tax" benchmark |
-| 3 | Layer optimization | 30m | layer split, dedup, distroless |
-| 4 | Push operations | 20m | push to a local registry |
-| 5 | rules_img & shipping choices | 15m | wrap-up + Q&A |
+| 0 | Why: correct & hermetic | 10m | clone + `bazel build //...` |
+| 1 | Basics: a first declarative image | 15m | build/run image vs Dockerfile |
+| 2 | Hermeticity in practice | 15m | the "docker tax" benchmark |
+| 3 | Layer optimization | 25m | layer split, dedup, distroless |
+| 4 | Push operations | 15m | push to a local registry |
+| 5 | rules_img & shipping choices | 10m | wrap-up + Q&A |
 
 ---
 
-# Module 0 — Why: correct & hermetic (15m)
+# Module 0 — Why: correct & hermetic (10m)
 
 **Bazel's mantra [Q1].** "Bazel's pitch is **{Fast, Correct} — choose two**.
 *Correct* means **hermetic**: a build with no external influence, so identical
@@ -55,7 +64,7 @@ security surface + CI bottleneck).
 
 ---
 
-# Module 1 — Basics: a first declarative image (20m)
+# Module 1 — Basics: a first declarative image (15m)
 
 **Imperative → declarative.** "In Bazel we stop *running* commands to create
 layers and instead **assemble** them from pre-built, content-addressed
@@ -80,7 +89,7 @@ leave the daemon. The app renders the workshop's own supply-chain graph."
 
 ---
 
-# Module 2 — Hermeticity in practice (20m)
+# Module 2 — Hermeticity in practice (15m)
 
 **Is Docker a good hermeticity validator? [Q3]** "Sort of — as a **negative
 test**. Run a script in a pinned base with `--network=none` and it *fails* if it
@@ -108,7 +117,7 @@ them. The point is the **order of magnitude** per edit."
 
 ---
 
-# Module 3 — Layer optimization (30m)
+# Module 3 — Layer optimization (25m)
 
 **Architect by volatility.** Order layers least → most volatile so rebuilds stay
 cheap: **1. Base OS** (static) · **2. runtimes/deps** (infrequent) · **3. app
@@ -145,7 +154,7 @@ manifest + `oci_image` in
 
 ---
 
-# Module 4 — Push operations (20m)
+# Module 4 — Push operations (15m)
 
 **Daemonless push.** "`rules_oci` gives `oci_push`; `rules_img` gives
 `image_push`. Neither needs the Docker daemon. Both push **only the blobs the
@@ -163,7 +172,7 @@ without QEMU-in-Docker.
 
 ---
 
-# Module 5 — rules_img & shipping choices (15m)
+# Module 5 — rules_img & shipping choices (10m)
 
 **rules_oci → rules_img.** `rules_oci` is the standard (packages layers with
 `tar`). `rules_img` is the next step: skips expensive `tar`/compression on every

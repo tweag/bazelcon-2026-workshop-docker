@@ -245,10 +245,11 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
    - ✅ **Artefact:** [`README.md`](README.md) →
      `https://akafael.github.io/bazelcon2026-docker-build-workshop/`
 
-## 7. 2-hour workshop format
+## 7. 90-minute workshop format (9:00–10:30)
 
-Reframe the deck + notes from a conference talk into a 6-module, ~120-min
+Reframe the deck + notes from a conference talk into a 6-module, ~90-min
 hands-on workshop (basics → layer optimization → push), with a Lab per module.
+Instructor: Rafael Lima · Sponsored by Tweag by Modus Create.
 
 1. [x] `slides/content.md` — full facilitator script: run sheet + six timed
    modules + a Lab each, weaving the 7 conceptual answers (mantra, runtime-vs-
