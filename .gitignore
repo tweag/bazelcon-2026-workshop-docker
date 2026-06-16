@@ -9,5 +9,8 @@ slides/dist/
 
 # Generated artifacts
 slides/graphs/*.dot
+# render_graph output PNGs; the deck's embedded one (samples_python-image.png)
+# is already tracked, so git keeps it despite this glob.
+slides/graphs/*.png
 *.pdf
 !docs/**/*.pdf

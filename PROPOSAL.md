@@ -1,4 +1,4 @@
-# Building Without Bytes: Orchestrating Containerized Workflows with Bazel
+# Building Without Bytes: High-Velocity Image Composition at Scale
 
 ## Abstract
 

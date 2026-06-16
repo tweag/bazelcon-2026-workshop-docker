@@ -57,15 +57,15 @@ A clean `git clone && bazel build //...` produces:
 
 1. [x] A minimal sample app to containerize (small static binary or service).
    - ✅ **Artefact:** [`samples/python/app.py`](samples/python/app.py) (the Graphviz app doubles as the sample app)
-2. [x] **`samples/dockerfile/`** — the "before": a traditional `Dockerfile`
+2. [x] **`samples/python/Dockerfile`** — the "before": a traditional `Dockerfile`
    build, kept as the benchmark baseline and the on-slide contrast.
    - ✅ **Artefact:** [`samples/python/Dockerfile`](samples/python/Dockerfile)
      (lives alongside the sample; builds & renders the PNG via `apt-get install graphviz`)
-3. [x] **`samples/oci/`** — the "after": the same image via `rules_oci`
+3. [x] **`samples/rules_oci/`** — the "after": the same image via `rules_oci`
    (`oci_image`, `oci_load`, `oci_push`) with explicit, granular layers.
    - ✅ **Artefact:** [`samples/rules_oci/BUILD.bazel`](samples/rules_oci/BUILD.bazel)
      → `//samples/rules_oci:image` (+ `:load`); reuses `//samples/python:app_layer`
-4. [x] **`samples/img/`** — the equivalent via `rules_img`, highlighting its
+4. [x] **`samples/rules_img/`** — the equivalent via `rules_img`, highlighting its
    differences from `rules_oci`.
    - ✅ **Artefact:** [`samples/rules_img/BUILD.bazel`](samples/rules_img/BUILD.bazel)
      → `//samples/rules_img:image` (+ `:load`); same app layer via
@@ -209,10 +209,10 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
 
 ## 5. Testing & CI
 
-1. [ ] `bazel test //...` is green from a clean clone and is the single
-   command that runs every test above.
-   - ↳ _individual tests pass; the full `//...` wildcard hasn't been verified
-     green end-to-end yet._
+1. [x] `bazel test //...` is green and is the single command that runs every
+   test above.
+   - ✅ **Verified:** `bazel build //...` (65 targets) + `bazel test //...`
+     (10/10) pass; structure test sized to silence the timeout warning.
 2. [x] CI workflow (`.github/workflows/`) running `bazel test //...`
    (+ `build_test //...`) on push/PR, ideally with a remote cache so the
    caching story is real, not just narrated.

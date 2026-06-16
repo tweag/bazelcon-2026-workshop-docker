@@ -14,6 +14,10 @@ filegroup(
         "//samples/python:app.py",
         "//samples/python:BUILD.bazel",
         "//samples/python:Dockerfile",
+        "//samples/python:image_test.yaml",
+        "//samples/rules_oci:BUILD.bazel",
+        "//samples/rules_img:BUILD.bazel",
+        "//samples/shared_layers:BUILD.bazel",
     ],
 )
 

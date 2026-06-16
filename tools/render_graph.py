@@ -1,9 +1,13 @@
-"""Render this repo's Bazel dependency graph to a PNG via `dot`.
+"""Render this repo's *first-party* Bazel dependency graph to a PNG via `dot`.
 
 A utility `bazel run` target (NOT hermetic): it shells out to `bazel query`
 and the `dot` binary, and writes into the source tree. That is the point of
 the live demo — `bazel run //tools:render_graph -- //tools:render_graph`
 draws a graph that contains its own node.
+
+The query is scoped to `intersect //...` so the graph shows only this repo's
+own targets (a clean, slide-sized picture) rather than the thousands of
+external dependency nodes.
 
 The nested `bazel query` uses a separate `--output_base` so it does not block
 on the lock held by the outer `bazel run` server.
@@ -34,7 +38,7 @@ def main(argv: list[str]) -> int:
     with tempfile.TemporaryDirectory(prefix="render-graph-ob-") as output_base:
         query = subprocess.run(
             ["bazel", f"--output_base={output_base}", "query",
-             f"deps({target})", "--output=graph", "--noshow_progress"],
+             f"deps({target}) intersect //...", "--output=graph", "--noshow_progress"],
             cwd=ws, text=True, capture_output=True,
         )
     if query.returncode != 0:
@@ -44,8 +48,11 @@ def main(argv: list[str]) -> int:
     with open(dot_path, "w") as fh:
         fh.write(query.stdout)
 
-    render = subprocess.run(["dot", "-Tpng", dot_path, "-o", png_path],
-                            text=True, capture_output=True)
+    render = subprocess.run(
+        ["dot", "-Tpng", "-Gbgcolor=transparent", "-Granksep=0.5",
+         "-Nshape=box", "-Nstyle=rounded", "-Nfontname=Helvetica",
+         dot_path, "-o", png_path],
+        text=True, capture_output=True)
     if render.returncode != 0:
         sys.stderr.write("`dot` failed (is graphviz installed?)\n")
         sys.stderr.write(render.stderr)

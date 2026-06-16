@@ -23,6 +23,9 @@ concurrency:
 
 jobs:
   build:
+    # Pages can't publish from a private repo on the free tier — skip (and so
+    # skip deploy via `needs`) to avoid red runs on every push while private.
+    if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
