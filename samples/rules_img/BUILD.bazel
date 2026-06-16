@@ -2,6 +2,7 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_img//img:image.bzl", "image_manifest")
 load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img//img:push.bzl", "image_push")
 load("@rules_img_images.bzl", "image")  # hub helper: image("<pull name>") -> label
 
 # The same image via rules_img (TASK §2.4). Identical app layer as
@@ -35,4 +36,13 @@ image_load(
 build_test(
     name = "image_build_test",
     targets = [":image"],
+)
+
+# bazel run //samples/rules_img:push  (start: bazel run //tools:local_registry)
+image_push(
+    name = "push",
+    image = ":image",
+    registry = "localhost:5000",
+    repository = "bwb/rules-img",
+    tag = "latest",
 )

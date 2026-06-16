@@ -1,6 +1,13 @@
 load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(default_visibility = ["//visibility:public"])
+
+# bazel run //tools:local_registry  -> registry:2 on localhost:5000 (push lab).
+sh_binary(
+    name = "local_registry",
+    srcs = ["local_registry.sh"],
+)
 
 # `bazel run //tools:render_graph -- //...` renders the dep graph to
 # slides/graphs/*.png via `dot`. Non-hermetic by design (needs bazel + dot on

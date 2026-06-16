@@ -1,5 +1,5 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 
 # The "after", via rules_oci (TASK §2.3). Same app layer as the rules_img
 # variant next door — the ONLY difference is the ruleset, so the two are an
@@ -26,4 +26,14 @@ oci_load(
 build_test(
     name = "image_build_test",
     targets = [":image"],
+)
+
+# Push to the local registry (start it: bazel run //tools:local_registry):
+#   bazel run //samples/rules_oci:push
+# Only blobs the registry lacks are uploaded — a shared base layer goes once.
+oci_push(
+    name = "push",
+    image = ":image",
+    remote_tags = ["latest"],
+    repository = "localhost:5000/bwb/rules-oci",
 )
