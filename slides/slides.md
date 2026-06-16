@@ -43,6 +43,23 @@ If you can model a talk as a build artifact,<br>you can model your whole supply 
 
 ---
 
+# The "black box" build
+
+Standard Dockerfiles are imperative scripts — and that hurts three ways:
+
+- **Non-deterministic** — `apt-get` today ≠ `apt-get` tomorrow.
+- **Coarse cache invalidation** — one early edit busts every layer below.
+- **The Docker socket** — a privileged daemon: security surface + CI bottleneck.
+
+<div class="mt-6 opacity-80">
+
+Bazel's answer: stop **running** commands to make layers — **assemble** them
+from pre-built, content-addressed artifacts. The filesystem becomes data.
+
+</div>
+
+---
+
 # The "before": an imperative Dockerfile
 
 The Docker daemon installs the `dot` system dependency with `RUN apt-get` —
@@ -69,6 +86,41 @@ graph; changing `app.py` reuses the base + deps layers untouched.
 <<< ../samples/python/BUILD.bazel#oci python {*}{maxHeight:'380px'}
 
 ---
+
+# High-velocity incrementalism
+
+Architect layers by **volatility**, then rebuild only what changed:
+
+1. **Base OS** — static &nbsp;·&nbsp; 2. **Runtimes / deps** — infrequent &nbsp;·&nbsp; 3. **App code** — constant
+
+The 1-second rebuild — change one string in a multi-GB app:
+
+```bash
+$ docker build -t app .              # invalidates at COPY . /app → 2–3 min
+$ bazel run //samples/rules_img:load # re-assembles one blob   → seconds
+```
+
+**`rules_oci` → `rules_img`:** skip `tar`/compression; a Go-based incremental
+loader keeps layers as transparent blobs until final assembly.
+
+---
+
+# Daemonless & verifiable
+
+No `/var/run/docker.sock`. Build on restricted CI runners (no root), on
+macOS / Windows without a VM, side-by-side with every other Bazel action.
+
+Test **without running** the container — structure checks in the sandbox:
+
+```python
+container_structure_test(
+    name = "structure_test",
+    image = ":image",
+    configs = ["test_config.yaml"],
+)
+```
+
+---
 layout: two-cols
 layoutClass: gap-8
 ---
@@ -93,15 +145,32 @@ bazel run //tools:render_graph \
      alt="dependency graph of //samples/python:image" />
 
 ---
+
+# Same artifact, three philosophies
+
+| Feature | Dockerfile | rules_oci | rules_img |
+|---|---|---|---|
+| **Execution** | Imperative | Declarative | Optimized declarative |
+| **Hermetic** | No | Yes | Yes |
+| **Speed** | Slow (cache miss) | Fast | Ultra-fast |
+| **Daemon req.** | Yes | No | No |
+| **Tar-less** | No | No | Yes |
+
+The further right, the more your build behaves like the rest of your Bazel
+graph: deterministic, cacheable, daemonless.
+
+---
 layout: center
 class: text-center
 ---
 
 # Takeaways
 
-**Slide-as-Code** — clone this repo's structure.<br>
-**Benchmark** — measure Dockerfile vs. Bazel/OCI on your own images.<br>
-**Mental model** — layers are granular, cacheable build outputs, not blobs.
+**Stop scripting, start mapping** — declare *what goes where*, not what to run.<br>
+**Architect for layers** — heavy deps apart from volatile code.<br>
+**Go daemonless** — better CI security and portability.<br>
+**Evaluate `rules_img`** — if `tar` is the bottleneck, upgrade.<br>
+**Slide-as-Code** — the deck is just another build target; benchmark your own images.
 
 <div class="mt-8 opacity-70">
 
