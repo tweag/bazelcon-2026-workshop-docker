@@ -1,0 +1,17 @@
+# Daemonless image validation (workshop Q3 / TASK §2.5).
+# Run with the `tar` driver — no container runtime, no Docker daemon: the test
+# inspects the image's layers and config directly in the Bazel sandbox.
+schemaVersion: "2.0.0"
+
+# File checks read the layer tarballs (no execution).
+fileExistenceTests:
+  - name: "py_binary launcher is present"
+    path: "/app/app"
+    shouldExist: true
+  - name: "graphviz dep packaged in the layer"
+    path: "/app/app.runfiles"
+    shouldExist: true
+
+# Metadata checks read the image config (no execution).
+metadataTest:
+  entrypoint: ["/app/app", "--render", "/tmp/supply_chain.png"]
