@@ -91,13 +91,18 @@ leave the daemon. The app renders the workshop's own supply-chain graph."
 
 # Module 2 — Hermeticity in practice (15m)
 
-**Is Docker a good hermeticity validator? [Q3]** "Sort of — as a **negative
-test**. Run a script in a pinned base with `--network=none` and it *fails* if it
-secretly needs host tools or the network. That flushes out undeclared
-dependencies. But it's **not a proof**: build-time network, timestamps, and
-ordering still sneak in. Bazel's sandbox is the stronger validator — it only
-exposes *declared* inputs, so a missing dependency fails at build time, every
-time."
+**Validate images without the daemon [Q3].** "How do you check an image is
+correct without a runtime? `container_structure_test` with `driver = "tar"`
+inspects the image's **files and config directly in the Bazel sandbox** — no
+daemon. We assert the launcher + runfiles exist and the entrypoint metadata
+(`fileExistenceTests` + `metadataTest`; no `commandTests`, which would need
+execution). It runs in CI alongside every other test — see
+`//samples/python:image_structure_test`."
+
+**A quick negative test (aside).** "For a *script's* hermeticity,
+`docker run --network=none` surfaces undeclared host deps — handy, but not a
+proof. Bazel's sandbox is the rigorous validator: only *declared* inputs are
+visible, so a missing dependency fails at build time, every time."
 
 **The "docker tax" [Q6].** "People reach for Docker to *get* hermeticity —
 'just put it in a container.' What does that cost per iteration? Same test
@@ -111,9 +116,9 @@ line and re-run."
 "The numbers are machine-dependent, so we *measure* them live rather than quote
 them. The point is the **order of magnitude** per edit."
 
-> **Lab 2 (8m):** `bazel run //benchmark/pytest_tax:compare` → prints the
-> Bazel-vs-Docker timings (cold + warm, after a one-line change). Optional:
-> `docker run --network=none --rm before` to watch a hidden-dep failure.
+> **Lab 2 (8m):** `bazel test //samples/python:image_structure_test`
+> (daemonless validation), then `bazel run //benchmark/pytest_tax:compare`
+> → the Bazel-vs-Docker timings (cold + warm, after a one-line change).
 
 ---
 
@@ -129,6 +134,13 @@ reused. Because layers are **content-addressed**, a shared base/deps layer is
 built once and reused across *every* image that references it — and later, at
 the registry, an existing blob is skipped on push. Optimization = arrange your
 layers so the common ones are **byte-identical**, and dedup does the rest."
+
+**How to build a layer, and what's shared [Q4/Q5].** "Build a layer with
+`pkg_tar`, `image_layer`, or `layer_from_tar`. What can be shared? The **base
+OS** and any **byte-identical** layer (deps, config). Concretely:
+`//samples/shared_layers` builds `image_a` and `image_b` on the same base + a
+common layer — `bazel run //samples/shared_layers:digests` prints the shared
+blob digests (5 shared, 1 unique app layer each)."
 
 **rules_distroless: hermetic system deps [Q4].** "Remember the `dot` gap?
 Here's the fix. Instead of `RUN apt-get install graphviz`, we declare the
@@ -150,7 +162,8 @@ manifest + `oci_image` in
 >    → runs `dot` (graphviz 2.43) from a **fully hermetic, pinned layer** built
 >    on scratch — no daemon, no `RUN apt-get`. (Wiring the plugin `config6` so
 >    it also *renders* is the documented follow-up in the sample.)
-> 3. Build two images sharing the base layer → it's built once.
+> 3. `bazel run //samples/shared_layers:digests` → two images, shared base +
+>    common layer; the diff prints the shared blob digests (built once).
 
 ---
 
@@ -187,16 +200,15 @@ transparent blobs until final assembly.
 | Daemon req. | Yes | No | No |
 | Tar-less | No | No | Yes |
 
-**Ship as Docker vs. source-only? [Q7]** "A Docker image is self-contained,
-immutable, content-addressed, scannable, and rollback-able — it carries
-**deploy hermeticity**. Shipping source is smaller to transfer but pushes
-non-hermeticity onto the consumer's build (they need the right toolchain and
-deps — 'works on my machine' returns). The nice part: with Bazel you emit
-**both from one graph** and choose per audience."
+**(If asked) ship as Docker vs. source-only? [Q7]** A Docker image is
+self-contained, immutable, scannable — it carries **deploy hermeticity**;
+shipping source pushes non-hermeticity onto the consumer's build. With Bazel
+you emit **both from one graph**. _(Cut from the deck to protect the 90-min
+budget — keep as a backup answer.)_
 
-**The dogfooding loop.** The Python sample renders *this repo's own dependency
-graph* with `dot`, and the deck imports the result — a build action drawing the
-graph of the build that produced the slide.
+**One last loop (closer).** The Python sample renders *this repo's own
+dependency graph* with `dot`, and the deck imports the result — a build action
+drawing the graph of the build that produced this very slide.
 
 **Takeaways.** Stop scripting, start mapping · architect for layers · go
 daemonless · evaluate `rules_img` · Slide-as-Code. **Mental model:** layers are
