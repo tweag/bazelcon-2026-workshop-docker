@@ -20,8 +20,8 @@ class BuildGraphTest(unittest.TestCase):
         for label in ("oci_image", "system layer", "slides deck"):
             self.assertIn(label, src)
 
-    def test_dogfooding_edge_present(self):
-        # the source -> slides "transclude" edge encodes the dogfooding thesis
+    def test_self_build_edge_present(self):
+        # the source -> slides "transclude" edge encodes the self-build thesis
         self.assertIn("transclude", app.build_graph().source)
 
     def test_main_prints_dot_without_dot_binary(self):

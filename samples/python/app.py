@@ -23,7 +23,7 @@ import graphviz
 
 #region build_graph
 def build_graph() -> graphviz.Digraph:
-    """The supply chain that builds this very talk (the dogfooding loop)."""
+    """The supply chain that builds this very talk."""
     dot = graphviz.Digraph("supply_chain", comment="Building Without Bytes")
     dot.attr(rankdir="LR")
     dot.attr("node", shape="box", style="rounded")

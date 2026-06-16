@@ -21,10 +21,10 @@ jobs:
       - name: Test everything (TASK §5.1)
         run: bazel test //... --test_output=errors
 
-      # TASK §5.3 — the dogfooding invariant: the deck must depend on the
+      # TASK §5.3 — the self-build invariant: the deck must depend on the
       # samples it transcludes, or the "slides are a build artifact" thesis
       # is just narration.
-      - name: Dogfooding invariant (//slides depends on //samples)
+      - name: Self-build invariant (//slides depends on //samples)
         run: |
           path=$(bazel query 'somepath(//slides:srcs, //samples/python:app.py)')
           echo "$path"

@@ -4,7 +4,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 package(default_visibility = ["//visibility:public"])
 
 # The deck (Markdown) and the real sources it transcludes via `<<< ../...`.
-# Listing the samples as srcs makes the dogfooding dependency explicit:
+# Listing the samples as srcs makes the self-build dependency explicit:
 # //slides depends on //samples (TASK §3.7).
 filegroup(
     name = "srcs",

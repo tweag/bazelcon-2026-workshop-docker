@@ -2,7 +2,7 @@
 
 Bootstrap the `bazelcon2026-docker-build-workshop` repo into a single Bazel
 workspace that builds **both** the container-image samples and the
-presentation itself. This is the "dogfooding" backbone of the talk
+presentation itself. This is the self-build backbone of the talk
 (see `PROPOSAL.md`): the slides and the example images are produced by the
 same `bazel build`.
 
@@ -99,7 +99,7 @@ A clean `git clone && bazel build //...` produces:
    just a static binary.
    - Dummy app renders something interesting: e.g. the repo's own
      dependency graph (`bazel query --output=graph` / `aquery`) into a PNG
-     via `dot`, closing the dogfooding loop (the build draws its own graph).
+     via `dot`, closing the loop (the build draws its own graph).
    - ✅ **Artefact:** [`samples/python/`](samples/python/) → `//samples/python:image`
      (builds, loads & runs in Docker) + [`BUILD.bazel`](samples/python/BUILD.bazel).
      _Single runfiles layer for now; the 3-way system/deps/app layer split is
@@ -168,7 +168,7 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
    (BUILD files, Dockerfile, app source) must be in the `//slides`
    target's `srcs`/`data` so it exists in the Bazel sandbox. This makes
    `//slides` explicitly depend on `//samples` — a broken sample can
-   break the deck, which is the strongest form of the dogfooding thesis.
+   break the deck, which is the strongest form of the self-build thesis.
    - ✅ **Artefact:** `//slides:srcs` filegroup in [`slides/BUILD.bazel`](slides/BUILD.bazel)
      (lists the `//samples/python:*` files)
 8. [x] **Spike — Vite/Slidev path resolution under sandbox**: the `@` alias
@@ -217,11 +217,11 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
    (+ `build_test //...`) on push/PR, ideally with a remote cache so the
    caching story is real, not just narrated.
    - ✅ **Artefact:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
-3. [x] Dogfooding-invariant test: assert via `bazel query` that
+3. [x] Self-build invariant test: assert via `bazel query` that
    `//slides` depends on `//samples` (e.g. `somepath(//slides, //samples/...)`
    is non-empty), locking in the thesis that the deck is built from the
    real sample graph.
-   - ✅ **Artefact:** "Dogfooding invariant" step in
+   - ✅ **Artefact:** "Self-build invariant" step in
      [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (verified locally:
      `somepath(//slides:srcs, //samples/python:app.py)` is non-empty)
 4. [x] Reproducibility check: build the OCI image twice and assert an
@@ -278,7 +278,7 @@ Instructor: Rafael Lima · Sponsored by Tweag by Modus Create.
    - **shared layers + two-image sample** → "Shared layers: two images, one blob"
      (`//samples/shared_layers`)
    Trimmed to fit 90 min: merged the two hermeticity slides, cut ship-vs-source,
-   demoted the dogfooding loop to a closing flourish.
+   demoted the closing self-build loop to a flourish.
 
 ## Acceptance criteria
 
