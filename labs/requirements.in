@@ -1,0 +1,7 @@
+# Python payloads for the "Flow descent" labs (TASK §10).
+# Each maps to a level of the hermetic-complexity narrative (§9):
+cryptography   # Level 1 — Rust + OpenSSL extension; the build-time trap
+pytesseract    # Level 2 — pure-Python wrapper that shells out to `tesseract`
+Pillow         # Level 2 — build/open the image we OCR
+pyopencl       # Level 3 — needs an OpenCL ICD at runtime (POCL on CPU)
+numpy          # Level 3 — host buffers for the kernel

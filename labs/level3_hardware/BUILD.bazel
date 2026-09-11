@@ -1,0 +1,96 @@
+# Level 3 — The Hardware Wall (pyopencl + POCL).   [SKELETON — fill the TODOs]
+#
+# The descent (run each; green = rung cleared):
+#   surface : bazel test //labs/level3_hardware:app_test     (green already — the
+#             bindings work; whether a *device* exists is environment-dependent)
+#   deep    : bazel test //labs/level3_hardware:image_structure_test  (RED now)
+#   abyss   : see HINT.md  (run the kernel on CPU via POCL; punch a hole for a GPU)
+#
+# The structure test only prints `level=fatal msg=FAIL` when it fails.
+# Decode it with:  bazel run //labs:explain -- level3
+#
+# Stuck? read HINT.md, or peek at //labs/level3_hardware/solution.
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+load("@labs_pypi//:requirements.bzl", "requirement")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img_images.bzl", "image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "pocl.yaml",
+    "pocl.lock.json",
+    "image_test.yaml",
+    "app.py",
+    "app_test.py",
+])
+
+py_binary(
+    name = "app",
+    srcs = ["app.py"],
+    imports = ["."],
+    main = "app.py",
+    deps = [
+        requirement("pyopencl"),
+        requirement("numpy"),
+    ],
+)
+
+# SURFACE — green: with no ICD in the sandbox there is no device (the wall).
+py_test(
+    name = "app_test",
+    size = "small",
+    srcs = ["app_test.py"],
+    imports = ["."],
+    tags = ["manual", "surface"],
+    deps = [":app"],
+)
+
+pkg_tar(
+    name = "app_layer",
+    srcs = [":app"],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+layer_from_tar(
+    name = "app_layer_img",
+    src = ":app_layer",
+)
+
+# TODO(deep): there's no OpenCL device in the image. Wrap the CPU ICD tar as a
+# layer and add it below so the code runs anywhere without a GPU:
+#   layer_from_tar(name = "pocl_layer_img", src = "@pocl_apt//:flat")
+image_manifest(
+    name = "image",
+    base = image("python_base_img"),
+    entrypoint = ["/app/app"],
+    # TODO(deep): add ":pocl_layer_img" to layers.
+    layers = [":app_layer_img"],
+)
+
+image_load(
+    name = "image_load",
+    image = ":image",
+    tag = "bwb/level3-hardware:latest",
+)
+
+filegroup(
+    name = "image.tar",
+    srcs = [":image_load"],
+    output_group = "tarball",
+)
+
+# DEEP — daemonless. RED until the POCL layer is bundled.
+container_structure_test(
+    name = "image_structure_test",
+    size = "small",
+    configs = ["image_test.yaml"],
+    driver = "tar",
+    image = ":image.tar",
+    tags = ["manual", "deep"],
+)

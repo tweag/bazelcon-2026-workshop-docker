@@ -1,0 +1,32 @@
+# Minimal Buildfarm config: one queue that accepts anything, one server, one
+# worker. Enough to run a build; nowhere near a production deployment.
+backplane:
+  redisUri: "redis://redis:6379"
+  # One queue that accepts any platform. Both halves matter, and they are
+  # separate switches:
+  #   queue.allowUnmatched  — the SERVER will enqueue an action whose platform
+  #                           properties this queue doesn't explicitly list.
+  #   worker.dequeueMatchSettings.allowUnmatched
+  #                         — the WORKER will pick such an action back up.
+  # With only the first, actions queue fine and then sit there forever: Bazel
+  # shows `[Sched] ... 41s` and never progresses. That is the symptom of a
+  # platform mismatch, not of a hung scheduler.
+  queues:
+    - name: "cpu"
+      allowUnmatched: true
+      properties:
+        - name: "*"
+          value: "*"
+
+server:
+  port: 8980
+  # This is the REAPI instance name. It has to match
+  # `--remote_instance_name=shard` in .bazelrc's local-rbe config.
+  name: shard
+
+worker:
+  port: 8981
+  publicName: "worker:8981"
+  root: "/tmp/worker"
+  dequeueMatchSettings:
+    allowUnmatched: true

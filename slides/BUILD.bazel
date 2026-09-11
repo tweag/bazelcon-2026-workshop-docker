@@ -1,37 +1,79 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//slides:@slidev/cli/package_json.bzl", slidev_bin = "bin")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(default_visibility = ["//visibility:public"])
 
+# Link the Bazel-fetched npm deps into //slides:node_modules/... (hermetic).
+npm_link_all_packages(name = "node_modules")
+
 # The deck (Markdown) and the real sources it transcludes via `<<< ../...`.
-# Listing the samples as srcs makes the self-build dependency explicit:
-# //slides depends on //samples (TASK §3.7).
+# Listing the samples makes the self-build dependency explicit: //slides depends
+# on //samples (TASK §3.7). These are also the inputs to the hermetic build.
 filegroup(
     name = "srcs",
     srcs = [
+        "global-top.vue",
         "slides.md",
+        "style.css",
         "vite.config.ts",
-        "//samples/python:app.py",
+        "//:MODULE.bazel",
+        "//samples/distroless:BUILD.bazel",
         "//samples/python:BUILD.bazel",
         "//samples/python:Dockerfile",
+        "//samples/python:app.py",
         "//samples/python:image_test.yaml",
-        "//samples/rules_oci:BUILD.bazel",
-        "//samples/rules_img:BUILD.bazel",
         "//samples/shared_layers:BUILD.bazel",
-    ],
+    ] + glob([
+        "fonts/**",
+        "images/**",
+        "graphs/**",
+    ]),
 )
 
-# Slidev driven through Bazel (pragmatic wrapper; hermetic rules_js is the
-# TASK §3.8 spike). All are `bazel run` targets.
+# Hermetic static build: Bazel-pinned Node toolchain + Bazel-fetched npm deps.
+# `bazel build //slides:build` -> bazel-bin/slides/dist (a declared TreeArtifact).
+# chdir into the package so the deck's `<<< ../samples/...` transclusions resolve
+# against the copied-to-bin sample sources.
+slidev_bin.slidev(
+    name = "build",
+    srcs = [
+        "global-top.vue",
+        "slides.md",
+        "style.css",
+        "vite.config.ts",
+        # Transcluded sample sources, staged into bazel-bin/samples/... by each
+        # package's copy_to_bin so `../samples/...` resolves from bin/slides.
+        "//:slides_inputs",
+        "//samples/distroless:slides_inputs",
+        "//samples/python:slides_inputs",
+        "//samples/shared_layers:slides_inputs",
+        # All Bazel-linked npm deps (incl. the hoisted @vue/compiler-sfc that
+        # Slidev resolves dynamically at build time).
+        ":node_modules",
+    ] + glob([
+        "fonts/**",
+        "images/**",
+        "graphs/**",
+    ]),
+    args = [
+        "build",
+        "slides.md",
+        "--out",
+        "dist",
+        "--base",
+        "/",
+    ],
+    chdir = package_name(),
+    out_dirs = ["dist"],
+)
+
+# Slidev dev server + PDF export still run through the host wrapper (Phase 2 makes
+# the PDF export hermetic too — it needs a Bazel-provided Chromium). `bazel run`.
 sh_binary(
     name = "present",  # bazel run //slides:present  -> dev server w/ hot reload
     srcs = ["slidev.sh"],
-)
-
-sh_binary(
-    name = "build",  # bazel run //slides:build  -> static HTML in slides/dist
-    srcs = ["slidev.sh"],
-    args = ["build"],
 )
 
 sh_binary(
@@ -39,6 +81,7 @@ sh_binary(
     srcs = ["slidev.sh"],
     args = [
         "export",
+        "--per-slide",  # render each slide standalone so nav-dependent global-top footer exports correctly
         "--output",
         "../docs/building-without-bytes.pdf",
     ],

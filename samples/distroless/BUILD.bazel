@@ -1,12 +1,14 @@
+load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img//img:load.bzl", "image_load")
 
-# The capstone (workshop Module 3 / TASK §2.9): close the `dot` system-dep gap
-# *hermetically*. Instead of `RUN apt-get install graphviz`, rules_distroless
-# materializes `dot` + its 162 transitive .debs (pinned in graphviz.lock.json)
-# into `@graphviz_apt//:flat` — a content-addressed layer built with no network,
-# no daemon, no RUN. We build the rootfs ON SCRATCH (not layered onto a
-# merged-usr base, which conflicts with the base's /lib -> usr/lib symlink).
+# Close the `dot` system-dep gap *hermetically* (workshop Module 3 / TASK §2.9).
+# Instead of `RUN apt-get install graphviz`, rules_distroless materializes `dot`
+# + its 162 transitive .debs (pinned in graphviz.lock.json) into
+# `@graphviz_apt//:flat`. We build the rootfs FROM SCRATCH (no base) via
+# rules_img's `image_manifest` with an explicit target `platform`.
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
@@ -14,14 +16,36 @@ exports_files([
     "graphviz.lock.json",
 ])
 
+# The deck transcludes `<<< ../samples/distroless/BUILD.bazel#distroless`; copy it
+# into bazel-bin for the hermetic //slides:build (rules_js runs from bazel-bin).
+copy_to_bin(
+    name = "slides_inputs",
+    srcs = ["BUILD.bazel"],
+)
+
+# Scratch image needs an explicit platform (no base to infer os/arch from).
+platform(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+#region apt_layer
+layer_from_tar(
+    name = "flat_layer",
+    src = "@graphviz_apt//:flat",  # hermetic `dot` + deps, pinned in the lock
+)
+#endregion
+
 #region distroless
-oci_image(
+image_manifest(
     name = "image",
-    architecture = "amd64",
     cmd = ["-V"],
     entrypoint = ["/usr/bin/dot"],
-    os = "linux",
-    tars = ["@graphviz_apt//:flat"],  # hermetic `dot` + deps, pinned in the lock
+    layers = [":flat_layer"],
+    platform = ":linux_amd64",  # scratch (no base)
 )
 #endregion
 
@@ -30,12 +54,11 @@ oci_image(
 #
 # NOTE: `dot` runs, but rendering (`-Tpng`/`-Tsvg`) needs the plugin registry
 # (/usr/lib/.../graphviz/config6) that Debian's postinst normally writes via
-# `dot -c`. Generating that config at build time, and combining this layer with
-# the Python app for a full hermetic render, is the documented follow-up.
-oci_load(
+# `dot -c`. Generating that config at build time is the documented follow-up.
+image_load(
     name = "image_load",
     image = ":image",
-    repo_tags = ["bwb/distroless:latest"],
+    tag = "bwb/distroless:latest",
 )
 
 build_test(

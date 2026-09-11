@@ -1,2 +1,0 @@
-workshop = building-without-bytes
-shared = true

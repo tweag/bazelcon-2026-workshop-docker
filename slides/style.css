@@ -8,13 +8,32 @@
  *   Hyperlink Blue    #1A73E8 — links only
  * Auto-loaded by Slidev over @slidev/theme-default. */
 
+/* Roboto, vendored under fonts/ (Apache-2.0, see fonts/LICENSE.txt) so the deck
+ * — and the PDF exported from it — renders the cover in the same face as the
+ * official BazelCon title card on every machine, with no build-time fetch. */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('./fonts/roboto-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/roboto-latin-400-italic.woff2') format('woff2');
+}
+
 :root {
   --bc-forest: #14552f;       /* primary brand / banners / dark surfaces */
   --bc-forest-deep: #0e3d22;  /* darker forest for gradients */
+  --bc-forest-card: #0a4519;  /* flat green of the official BazelCon title card */
   --bc-lime: #7cb342;         /* accent / graphics */
   --bc-lime-light: #a5d06e;   /* lighter lime */
-  --bc-bg: #ffffff;           /* content slide background */
-  --bc-bg-soft: #f4f7f1;      /* panels / code on light slides */
+  --bc-bg: #f7f1e3;           /* warm cream content slide background (antique cookbook) */
+  --bc-bg-soft: #efe7d3;      /* warm panels / code on light slides */
   --bc-ink: #333333;          /* charcoal body copy */
   --bc-link: #1a73e8;         /* hyperlink blue — links only */
 
@@ -23,9 +42,12 @@
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Light, clean content slides. */
+/* Light, clean content slides — warm cream with a subtle aged-paper texture. */
 .slidev-layout {
-  background: var(--bc-bg);
+  background-color: var(--bc-bg);                 /* cream fallback */
+  background-image: url('./images/paper-bg.webp'); /* aged-paper texture (right-sized WebP) */
+  background-size: cover;
+  background-position: center;
   color: var(--bc-ink);
 }
 
@@ -40,17 +62,7 @@
   background: linear-gradient(90deg, var(--bc-lime), var(--bc-lime-light) 60%, var(--bc-forest));
 }
 
-/* Persistent BazelCon footer mark (skipped on the cover). */
-.slidev-layout:not(.bazel-cover)::after {
-  content: 'BazelCon 2026 · Building Without Bytes';
-  position: absolute;
-  bottom: 0.7rem;
-  right: 1.1rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
-  color: var(--bc-forest);
-  opacity: 0.6;
-}
+/* Footer mark now lives in slides/global-top.vue (clickable repo link). */
 
 /* Headings in forest green, with a lime kicker under H1. */
 .slidev-layout h1 {
@@ -79,6 +91,12 @@
   color: var(--bc-forest);
 }
 
+/* The default theme dims the lead paragraph (h1 + p) to opacity-50, which is too
+ * faint on the cream paper. Darken it for readability on every slide. */
+.slidev-layout h1 + p {
+  opacity: 0.88;
+}
+
 /* Inline code: forest on a soft lime tint. */
 .slidev-layout :not(pre) > code {
   color: var(--bc-forest);
@@ -96,42 +114,58 @@
   background: var(--bc-bg-soft);
 }
 
-/* --- Cover slide: deep forest green hero -------------------------------- */
-.bazel-cover {
-  background:
-    radial-gradient(70% 90% at 82% 8%, rgba(124, 179, 66, 0.22), transparent),
-    linear-gradient(155deg, var(--bc-forest-deep), var(--bc-forest) 75%, #103f23);
-  color: #eaf6e8;
-}
-.bazel-cover::before { height: 0; } /* no top bar on the cover */
-.bazel-cover h1 {
+/* --- Cover slide: a copy of the official BazelCon title card ------------- */
+/* Measured off images/talk-rules-img.jpg (1280x720) and scaled to Slidev's
+ * 980x552 canvas: 54px left margin, 44px/1.28 title, 27px byline.
+ * Selectors are `.slidev-layout.bazel-cover` rather than plain `.bazel-cover`:
+ * Slidev gives the first slide the `cover` layout by default, and
+ * theme-default's `.slidev-layout.cover h1 { font-size: 3.75rem }` would
+ * otherwise outrank a single-class rule. */
+.slidev-layout.bazel-cover {
+  background-color: var(--bc-forest-card);
+  /* The card's faint diagonal lattice. */
+  background-image:
+    repeating-linear-gradient(45deg,
+      rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(-45deg,
+      rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 34px);
   color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0 3.4rem;
 }
-.bazel-cover h1::after {
-  background: var(--bc-lime);
-  margin-left: auto;
-  margin-right: auto;
+.slidev-layout.bazel-cover::before { height: 0; } /* no top bar on the cover */
+.slidev-layout.bazel-cover h1 {
+  font-family: 'Roboto', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 2.75rem;
+  line-height: 1.28;
+  letter-spacing: 0;
+  color: #ffffff;
+  max-width: 76%; /* wraps to 3 lines, as on the card */
+  margin: 0;
 }
-.bazel-cover h3 {
-  color: var(--bc-lime-light);
+.slidev-layout.bazel-cover h1::after { display: none; } /* the card has no rule under the title */
+.slidev-layout.bazel-cover .cover-byline {
+  font-family: 'Roboto', system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.7rem;
+  color: #ffffff;
+  margin-top: 1.1rem;
 }
-
-/* Geometric blocks motif (a nod to the Bazel logo), in lime/forest. */
-.bazel-blocks {
-  display: inline-grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  margin-bottom: 1.5rem;
-  transform: rotate(45deg);
+/* Official lockup, top-right. 11rem wide renders the mark at the card's size;
+ * the SVG's viewBox carries its own padding. */
+.slidev-layout.bazel-cover .cover-logo {
+  position: absolute;
+  top: 2.1rem;
+  right: 2.9rem;
+  width: 11rem;
+  height: auto;
 }
-.bazel-blocks i {
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  background: var(--bc-lime);
-}
-.bazel-blocks i:nth-child(1) { background: var(--bc-lime-light); }
-.bazel-blocks i:nth-child(4) { background: var(--bc-forest); }
 
 /* --- Module-divider (section) slides: forest banner --------------------- */
 .slidev-layout.section {
@@ -179,3 +213,198 @@
   color: #eaf6e8;
   background: rgba(124, 179, 66, 0.24);
 }
+
+/* --- Image placeholder slots (art generated & dropped in later) ---------- */
+/* A slide reserves space for a to-be-generated illustration with:
+ *   <div class="img-slot">🖼 caption describing the intended image</div>
+ * plus an  <!-- IMAGE: … -->  comment naming slides/images/<name>.png.
+ * Reads clearly with no asset; swap for an <img> once the art exists. */
+.img-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 8.5rem;
+  padding: 1.1rem 1.4rem;
+  border: 2px dashed var(--bc-lime);
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(124, 179, 66, 0.06) 0, rgba(124, 179, 66, 0.06) 10px,
+      transparent 10px, transparent 20px);
+  color: var(--bc-forest);
+  font-style: italic;
+  opacity: 0.85;
+}
+/* On the dark surfaces (section/statement/cover), keep it legible. */
+.bazel-cover .img-slot,
+.slidev-layout.section .img-slot,
+.slidev-layout.statement .img-slot {
+  border-color: var(--bc-lime-light);
+  color: #eaf6e8;
+}
+
+/* Compact variant for slides that already carry text or a code block. */
+.img-slot.compact {
+  min-height: 3.75rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+/* Antique "plate" illustrations: soft radial vignette so the cream paper of the
+ * generated image dissolves into the cream slide (hides per-image tone variance
+ * and the hard rectangle edge). Apply to <img class="… plate">. */
+.plate {
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 70%, transparent 100%);
+          mask-image: radial-gradient(ellipse at center, #000 70%, transparent 100%);
+}
+
+/* Shrink a code block that would otherwise overflow its column. Used where a
+ * transcluded region is real (and so can't be trimmed to fit) but wide: the
+ * app.py render guard, the py_binary/pkg_tar pair, the #image region. */
+/* Set the theme's own variables — `.slidev-code` declares font-size with
+ * `!important`, so a plain rule here would never win. */
+.code-sm {
+  --slidev-code-font-size: 0.62rem;
+  --slidev-code-line-height: 1.55;
+}
+
+/* --- Reference cards: linked conference-talk thumbnails ------------------ */
+/* These are the deck's only photographic assets — YouTube thumbnails on a page
+ * of antique ink-and-watercolor plates. Framed as *citations*, not illustrations:
+ * a thin forest rule and rounded corners say "source", and they deliberately
+ * never get the `.plate` mask (that would read as artwork). */
+/* The theme gives every `a` a dashed bottom border; a citation card is a block,
+ * not a text link, so it opts out. */
+.slidev-layout a.talk-card {
+  display: block;
+  border-bottom-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.talk-card img {
+  width: 100%;
+  border: 1px solid var(--bc-forest);
+  border-radius: 6px;
+  display: block;
+}
+.talk-card:hover img { border-color: var(--bc-link); }
+.talk-cap {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--bc-forest);
+  opacity: 0.85;
+}
+.talk-cap code { font-size: 0.95em; }
+
+/* --- Side-by-side connectors: Dockerfile ↔ BUILD.bazel ------------------- */
+/* Colour-code the four moving parts so the eye maps them across both files.
+ * Used as inline chips on the directive/attribute name in each row of the
+ * Dockerfile -> rules_img mapping table. Tints share the palette's hues. */
+/* Four *distinguishable* washes, one per brand hue — forest / lime / blue /
+ * charcoal. The earlier tints were three shades of pale green, so "matching
+ * colours are the same concern" was unreadable from the back of the room. */
+.hl-base   { background: rgba(20, 85, 47, 0.24);   box-shadow: inset 2px 0 var(--bc-forest); }
+.hl-deps   { background: rgba(124, 179, 66, 0.42); box-shadow: inset 2px 0 var(--bc-lime); }
+.hl-src    { background: rgba(26, 115, 232, 0.18); box-shadow: inset 2px 0 var(--bc-link); }
+.hl-entry  { background: rgba(51, 51, 51, 0.16);   box-shadow: inset 2px 0 var(--bc-ink); }
+.hl-base, .hl-deps, .hl-src, .hl-entry {
+  border-radius: 3px;
+  padding: 0 .35em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The Dockerfile -> rules_img walk. One directive per slide: Dockerfile on the
+ * left, an arrow, rules_img on the right, one takeaway underneath. Everything
+ * here exists to keep a step slide *sparse* — the earlier six-row table said
+ * the same things but read as a wall. */
+.xlate {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.25rem;
+  align-items: center;
+}
+.xlate-arrow { font-size: 2rem; opacity: 0.35; text-align: center; }
+/* `RUN pip` is the one step slide whose right column runs long (two transcluded
+ * regions), so its takeaway moves into the left column's dead space instead of
+ * sitting under the grid — which means the columns align to the top, not centre. */
+.xlate-top { align-items: start; }
+.xlate-none {
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 600;
+  opacity: 0.45;
+  font-style: italic;
+}
+
+/* The recap: four Dockerfile directives, their Bazel form, and the package that
+ * provides it — a summary of a walk the audience has already taken. The third
+ * column is deliberately quieter than the first two. */
+.xlate-recap table { width: 100%; font-size: 0.85rem; line-height: 1.5; }
+.xlate-recap th, .xlate-recap td { padding: 0.45rem 0.6rem; vertical-align: top; }
+.xlate-recap th:nth-child(1), .xlate-recap td:nth-child(1) { width: 30%; }
+.xlate-recap th:nth-child(2), .xlate-recap td:nth-child(2) { width: 32%; }
+.xlate-recap th:nth-child(3), .xlate-recap td:nth-child(3) { width: 38%; font-size: 0.9em; opacity: 0.85; }
+
+/* The roadmap tile row that opens the walk: one tile per directive, in the same
+ * four colours the step slides use for their titles. */
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  text-align: center;
+}
+.step-n { font-size: 1.05rem; font-weight: 700; line-height: 2; }
+.step-what { margin-top: 0.6rem; font-weight: 600; color: var(--bc-forest); }
+.step-note { margin-top: 0.15rem; font-size: 0.85rem; opacity: 0.7; }
+/* The target form each tile translates to. One line only — a second line breaks
+ * the four-column grid's alignment. */
+.step-code {
+  margin-top: 0.35rem;
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--bc-forest);
+  opacity: 0.8;
+}
+
+/* Each step slide's title states the takeaway; this kicker above it names the
+ * directive being translated, one colour per directive (they match the recap
+ * table's rows). Keeps the wayfinding without putting a heavy colour chip
+ * inside the h1. */
+.step-kicker { font-size: 0.85rem; font-weight: 700; margin-bottom: -0.15rem; }
+
+/* local (build/run) vs delivery (push/pull) — the deck's two halves. Modules
+ * 0-2 are local, 3-4 are delivery; used on the menu rows and section dividers. */
+.half-local, .half-ship {
+  border-radius: 3px;
+  padding: 0.05em 0.5em;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.half-local { background: rgba(20, 85, 47, 0.14); color: var(--bc-forest); }
+.half-ship  { background: rgba(26, 115, 232, 0.16); color: var(--bc-link); }
+.divider-half { margin-top: 0.6rem; opacity: 0.85; font-size: 0.85rem; }
+/* Section dividers paint the dark forest background, where the light-surface
+ * chip above is forest-on-forest — invisible. Flip both to light-on-dark. */
+.divider-half.half-local { background: rgba(165, 208, 110, 0.18); color: var(--bc-lime-light); }
+.divider-half.half-ship  { background: rgba(120, 180, 255, 0.22); color: #a8cbff; }
+
+/* "Two halves of the loop": the two verbs we've already covered recede so the
+ * two the delivery modules are about can lead. */
+.verb-icon { font-size: 2.25rem; color: var(--bc-forest); display: flex; justify-content: center; margin-bottom: 0.25rem; }
+/* The Module 0 closer stacks both blocks in one left-aligned column, with the
+ * icon riding inline in the h3 rather than centred above it. */
+.verb-glyph {
+  display: inline-block;
+  vertical-align: -0.12em;
+  margin-right: 0.4rem;
+  color: var(--bc-forest);
+}
+.verb-done { opacity: 0.42; }
+.verb-now .verb-icon { color: var(--bc-link); }
+.verb-tag { margin-top: 0.35rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.verb-done .verb-tag { color: var(--bc-forest); }
+.verb-now .verb-tag { color: var(--bc-link); }

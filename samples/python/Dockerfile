@@ -4,16 +4,16 @@
 #region dockerfile
 FROM python:3.12-slim-bookworm
 
-# System dependency: the `dot` binary. Imperative, daemon-run, cache-coarse.
+# System dep: `dot` binary — non-hermetic.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends graphviz \
     && rm -rf /var/lib/apt/lists/*
 
-# Python dependency layer.
+# Python deps.
 COPY requirements_lock.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# App-source layer (changes here invalidate everything below in a Dockerfile).
+# App source — edits bust the layers below.
 WORKDIR /app
 COPY app.py /app/app.py
 

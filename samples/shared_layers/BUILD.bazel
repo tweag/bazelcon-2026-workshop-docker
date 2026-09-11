@@ -1,45 +1,84 @@
+load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
-# Two images that share layers (workshop Q5). Both sit on the same @python_base
-# and include the same :common_layer; only the app layer differs. Because
-# layers are content-addressed, the base + common blobs are byte-identical
-# across both images — so they're built once, cached once, and pushed once.
+# Two real-ish services — an `api` and a `worker` — that share layers (workshop
+# Q5). Both sit on the same python_base_img and include the same shared config +
+# library layer; only the per-service app layer differs. Because layers are
+# content-addressed, the base + common blobs are byte-identical across both
+# images — built once, cached once, pushed once.
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["config.txt"])
+exports_files([
+    "common/settings.yaml",
+    "common/shared.py",
+])
 
-# Shared layer (e.g. shared config/deps) — identical in both images.
+# The deck transcludes `<<< ../samples/shared_layers/BUILD.bazel#shared`; copy it
+# into bazel-bin for the hermetic //slides:build (rules_js runs from bazel-bin).
+copy_to_bin(
+    name = "slides_inputs",
+    srcs = ["BUILD.bazel"],
+)
+
+# Shared config + library — identical in both images → one content-addressed blob.
 pkg_tar(
     name = "common_layer",
-    srcs = ["config.txt"],
-    package_dir = "/etc/bwb",
+    srcs = [
+        "common/settings.yaml",
+        "common/shared.py",
+    ],
+    package_dir = "/opt/app/common",
+    strip_prefix = "common",
 )
 
-# Per-app layers — the only thing that differs.
-pkg_tar(name = "a_layer", srcs = ["a.txt"], package_dir = "/app")
+# Per-service app layers — the only thing that differs between the two images.
+pkg_tar(
+    name = "api_layer",
+    srcs = ["api/main.py"],
+    package_dir = "/opt/app",
+    strip_prefix = "api",
+)
 
-pkg_tar(name = "b_layer", srcs = ["b.txt"], package_dir = "/app")
+pkg_tar(
+    name = "worker_layer",
+    srcs = ["worker/main.py"],
+    package_dir = "/opt/app",
+    strip_prefix = "worker",
+)
+
+layer_from_tar(name = "common_layer_img", src = ":common_layer")
+
+layer_from_tar(name = "api_layer_img", src = ":api_layer")
+
+layer_from_tar(name = "worker_layer_img", src = ":worker_layer")
 
 #region shared
-oci_image(
-    name = "image_a",
-    base = "@python_base",
-    tars = [":common_layer", ":a_layer"],  # common_layer shared with image_b ↓
+image_manifest(
+    name = "image_api",
+    base = image("python_base_img"),
+    entrypoint = ["python", "/opt/app/main.py"],
+    layers = [":common_layer_img", ":api_layer_img"],  # common_layer shared ↓
 )
 
-oci_image(
-    name = "image_b",
-    base = "@python_base",
-    tars = [":common_layer", ":b_layer"],  # same :common_layer → same blob digest
+image_manifest(
+    name = "image_worker",
+    base = image("python_base_img"),
+    entrypoint = ["python", "/opt/app/main.py"],
+    layers = [":common_layer_img", ":worker_layer_img"],  # same common layer → same blob
 )
 #endregion
 
 build_test(
     name = "images_build_test",
-    targets = [":image_a", ":image_b"],
+    targets = [
+        ":image_api",
+        ":image_worker",
+    ],
 )
 
 # bazel run //samples/shared_layers:digests → prints the shared layer digests.

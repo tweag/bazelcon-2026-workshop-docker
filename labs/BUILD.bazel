@@ -1,0 +1,27 @@
+load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# bazel run //labs:requirements.update  -> re-locks requirements.in (hashed).
+compile_pip_requirements(
+    name = "requirements",
+    src = "requirements.in",
+    requirements_txt = "requirements_lock.txt",
+)
+
+# The depth meter / guide: bazel run //labs:progress
+sh_binary(
+    name = "progress",
+    srcs = ["progress.sh"],
+)
+
+# Why is my rung red?  bazel run //labs:explain
+# container_structure_test reports via JUnit XML, so the Bazel console only
+# shows `level=fatal msg=FAIL`. This prints the per-check reason.
+py_binary(
+    name = "explain",
+    srcs = ["explain.py"],
+    main = "explain.py",
+)

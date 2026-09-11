@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Keep the workflow actions current (this is what avoids the "Node.js action
+  # deprecated" warnings recurring).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+
+  # The Slidev deck's npm dependencies.
+  - package-ecosystem: "npm"
+    directory: "/slides"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps"
+# Note: the Bazel module deps (MODULE.bazel) and the rules_python / rules_distroless
+# locks aren't managed here — Dependabot has no bzlmod ecosystem, and the pip
+# locks are regenerated via `bazel run //...:requirements.update`, not pip.

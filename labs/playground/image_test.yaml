@@ -1,0 +1,17 @@
+# Daemonless checks (tar driver) for the playground image.
+# Add your own assertions here — this file is meant to be edited.
+schemaVersion: "2.0.0"
+
+fileExistenceTests:
+  - name: "the app is in the image"
+    path: "/app/app"
+    shouldExist: true
+  - name: "the config layer landed"
+    path: "/etc/playground/greeting.txt"
+    shouldExist: true
+
+metadataTest:
+  envVars:
+    - key: "PLAYGROUND_CONFIG"
+      value: "/etc/playground/greeting.txt"
+  entrypoint: ["/app/app"]

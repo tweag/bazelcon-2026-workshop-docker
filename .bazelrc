@@ -19,5 +19,57 @@ build --disk_cache=~/.cache/bazel-disk
 # Surface this repo's own conventions.
 common --enable_platform_specific_config
 
+# --- Remote cache / remote execution (labs/REMOTE.md) ------------------------
+# None of these are on by default: they need an endpoint and an API key, which
+# you put in .bazelrc.user (gitignored, try-imported at the bottom of this file):
+#
+#     build --remote_header=x-buildbuddy-api-key=YOUR_KEY
+#
+# 1. Shared cache only — the safe first step. Everyone's artifacts, one pantry.
+build:remote-cache --remote_cache=grpcs://remote.buildbuddy.io
+build:remote-cache --bes_backend=grpcs://remote.buildbuddy.io
+build:remote-cache --bes_results_url=https://app.buildbuddy.io/invocation/
+build:remote-cache --remote_timeout=600
+build:remote-cache --experimental_remote_cache_compression
+
+# 2. Building WITHOUT the bytes — the talk's title, as a flag. Outputs stay in
+#    the remote CAS; only what you actually asked for is downloaded. This is
+#    what makes `image_push` with strategy = "lazy" pay off.
+build:bwb --config=remote-cache
+build:bwb --remote_download_minimal
+
+# 3. Full remote execution. Actions run on the remote workers described by
+#    //tools:rbe_platform — change the container-image there to match your pool.
+build:rbe --config=bwb
+build:rbe --remote_executor=grpcs://remote.buildbuddy.io
+build:rbe --host_platform=//tools:rbe_platform
+build:rbe --extra_execution_platforms=//tools:rbe_platform
+build:rbe --jobs=50
+
+# --- The same three tiers, served from your own machine ----------------------
+# No account, no API key, no network. Start the services first:
+#
+#     bazel run //tools:local_cache        # REAPI cache  -> localhost:9092
+#     bazel run //tools:local_rbe          # executors    -> localhost:8980 (docker)
+#
+# `--disk_cache=` is not decoration: line 17 turns the disk cache on for every
+# build, and a disk hit is served before Bazel ever asks the remote. Leaving it
+# on makes a remote-cache demo look like it does nothing.
+build:local-cache --remote_cache=grpc://localhost:9092
+build:local-cache --disk_cache=
+build:local-cache --remote_timeout=600
+
+build:local-bwb --config=local-cache
+build:local-bwb --remote_download_minimal
+
+build:local-rbe --remote_executor=grpc://localhost:8980
+build:local-rbe --remote_cache=grpc://localhost:8980
+build:local-rbe --remote_instance_name=shard
+build:local-rbe --disk_cache=
+build:local-rbe --remote_download_minimal
+build:local-rbe --host_platform=//tools:rbe_platform
+build:local-rbe --extra_execution_platforms=//tools:rbe_platform
+build:local-rbe --jobs=8
+
 # Local developer overrides (gitignored).
 try-import %workspace%/.bazelrc.user

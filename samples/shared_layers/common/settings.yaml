@@ -1,0 +1,6 @@
+# Shared runtime config — byte-identical across every service, so it lands in a
+# single content-addressed layer that all images reuse (built & pushed once).
+service:
+  log_level: info
+  metrics_port: 9090
+  region: eu-west-1

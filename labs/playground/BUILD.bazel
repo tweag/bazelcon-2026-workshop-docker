@@ -1,0 +1,96 @@
+# Playground — no puzzle, no TODOs, nothing to fix. This package is green and
+# stays green; it is here so you have a real, working image to *change*.
+#
+#   bazel test //labs/playground/...                 # everything, ~2s + ~15s
+#   bazel run  //labs/playground:app                 # the payload, no image
+#   bazel run  //labs/playground:image_load          # -> local Docker daemon
+#   docker run --rm bwb/playground
+#
+# Things to try are listed in README.md.
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img_images.bzl", "image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# The payload. `deps` is deliberately empty: add
+# `load("@labs_pypi//:requirements.bzl", "requirement")` at the top and then
+# e.g. `requirement("cryptography")` here, re-run, and watch the report change.
+py_binary(
+    name = "app",
+    srcs = ["app.py"],
+    imports = ["."],
+    main = "app.py",
+    deps = [],
+)
+
+py_test(
+    name = "app_test",
+    size = "small",
+    srcs = ["app_test.py"],
+    imports = ["."],
+    deps = [":app"],
+)
+
+# Layer 1 — the application (interpreter + your code + any deps you add).
+# Edit app.py and only this layer's digest changes.
+pkg_tar(
+    name = "app_layer",
+    srcs = [":app"],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+# Layer 2 — config, on its own so editing it does NOT rebuild the app layer.
+# This split is the whole "software catering" idea, in nine lines.
+pkg_tar(
+    name = "config_layer",
+    srcs = ["greeting.txt"],
+    package_dir = "/etc/playground",
+)
+
+layer_from_tar(
+    name = "app_layer_img",
+    src = ":app_layer",
+)
+
+layer_from_tar(
+    name = "config_layer_img",
+    src = ":config_layer",
+)
+
+image_manifest(
+    name = "image",
+    base = image("python_base_img"),
+    entrypoint = ["/app/app"],
+    env = {"PLAYGROUND_CONFIG": "/etc/playground/greeting.txt"},
+    layers = [
+        ":app_layer_img",
+        ":config_layer_img",
+    ],
+)
+
+image_load(
+    name = "image_load",
+    image = ":image",
+    tag = "bwb/playground:latest",
+)
+
+filegroup(
+    name = "image.tar",
+    srcs = [":image_load"],
+    output_group = "tarball",
+)
+
+# Daemonless validation. Add your own assertions to image_test.yaml.
+container_structure_test(
+    name = "image_structure_test",
+    size = "small",
+    configs = ["image_test.yaml"],
+    driver = "tar",
+    image = ":image.tar",
+)

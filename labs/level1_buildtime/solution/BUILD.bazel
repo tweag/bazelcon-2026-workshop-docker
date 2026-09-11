@@ -1,0 +1,66 @@
+# Level 1 — reference solution (green). The only change from the skeleton is
+# wiring the prebuilt cryptography wheel as a dep; no compiler ever runs.
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@labs_pypi//:requirements.bzl", "requirement")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img_images.bzl", "image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+py_binary(
+    name = "app",
+    srcs = ["app.py"],
+    imports = ["."],
+    main = "app.py",
+    deps = [requirement("cryptography")],  # <- the fill: prebuilt wheel
+)
+
+py_test(
+    name = "app_test",
+    size = "small",
+    srcs = ["app_test.py"],
+    imports = ["."],
+    tags = ["surface"],
+    deps = [":app"],
+)
+
+pkg_tar(
+    name = "app_layer",
+    srcs = [":app"],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+layer_from_tar(
+    name = "app_layer_img",
+    src = ":app_layer",
+)
+
+image_manifest(
+    name = "image",
+    base = image("python_base_img"),
+    entrypoint = ["/app/app"],
+    layers = [":app_layer_img"],
+    tags = ["deep"],
+)
+
+# The layer really carries the prebuilt manylinux wheel — no compiler ran, and
+# no sdist sources came along. See ../layer_test.py.
+py_test(
+    name = "image_layer_test",
+    size = "small",
+    srcs = ["//labs/level1_buildtime:layer_test.py"],
+    args = ["$(rootpath :app_layer)"],
+    data = [":app_layer"],
+    main = "layer_test.py",
+    tags = ["deep"],
+)
+
+build_test(
+    name = "image_build_test",
+    tags = ["deep"],
+    targets = [":image"],
+)

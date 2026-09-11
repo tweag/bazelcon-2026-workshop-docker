@@ -1,0 +1,153 @@
+name: labs
+
+# The labs have contracts that `bazel test //...` cannot check, because the
+# skeletons are `manual`-tagged (wildcard patterns skip them) and because a
+# green structure test says nothing about whether the image can actually run.
+#
+# Four of them, one job each, so a red X names the thing that broke:
+#   reference  — every solution/ target is green
+#   skeletons  — every [RED] rung really does start red
+#   images     — the images the abyss rungs tell attendees to `docker run`, run
+#   guide      — the guide targets work and the ladder matches reality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "labs/**"
+      - "tools/**"
+      - "MODULE.bazel"
+      - ".bazelrc"
+      - ".github/workflows/labs.yml"
+  pull_request:
+    paths:
+      - "labs/**"
+      - "tools/**"
+      - "MODULE.bazel"
+      - ".bazelrc"
+      - ".github/workflows/labs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: labs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reference:
+    name: reference solutions are green
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same reason as the `bazel` job in ci.yml: the images do not fit on a
+      # stock runner next to a disk cache, and overflowing kills it silently.
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
+
+      - run: bazel test //labs/... --test_output=errors
+
+  # A skeleton that accidentally passes is a lab with nothing to do in it. This
+  # is the one check that would have caught Level 1's `image_build_test`, which
+  # passed with `deps = []` because a build_test cannot see a missing Python dep.
+  skeletons:
+    name: "skeleton is red: ${{ matrix.rung }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rung:
+          - //labs/level1_buildtime:app_test
+          - //labs/level1_buildtime:image_layer_test
+          - //labs/level2_ghost:image_structure_test
+          - //labs/level3_hardware:image_structure_test
+    steps:
+      - uses: actions/checkout@v5
+      - name: ${{ matrix.rung }} must fail
+        run: |
+          if bazel test "${{ matrix.rung }}" --test_output=summary; then
+            echo "::error::${{ matrix.rung }} PASSED but is supposed to start red"
+            exit 1
+          fi
+          echo "red as designed"
+
+  # container_structure_test lstats paths in an unpacked tar; it never execs
+  # anything. So it happily passed while Levels 2 and 3 produced images whose
+  # /lib had been replaced by an apt layer and could not run a single binary.
+  # Only `docker run` catches that.
+  images:
+    name: the lab images actually run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same reason as the `bazel` job in ci.yml: the images do not fit on a
+      # stock runner next to a disk cache, and overflowing kills it silently.
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
+
+      - name: Level 2 — the ghost is real
+        run: |
+          set -euo pipefail
+          bazel run //labs/level2_ghost/solution:image_load
+          docker run --rm bwb/level2-ghost | tee /dev/stderr | grep -q "^tesseract 5"
+
+      - name: Level 2 abyss — OCR runs, from a pinned layer, with no network
+        run: |
+          set -euo pipefail
+          docker run --rm bwb/level2-ghost --ocr /app/sample.png \
+            | tee /dev/stderr | grep -q "HERMETIC OCR"
+
+      - name: Level 3 — a kernel runs on the CPU via POCL
+        run: |
+          set -euo pipefail
+          bazel run //labs/level3_hardware/solution:image_load
+          docker run --rm bwb/level3-hardware \
+            | tee /dev/stderr | grep -q "vector_add on OpenCL OK"
+
+      - name: Playground — two layers, config layer landed
+        run: |
+          set -euo pipefail
+          bazel run //labs/playground:image_load
+          docker run --rm bwb/playground | tee /dev/stderr | grep -q "hello from a layer"
+
+  guide:
+    name: the guide works
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: //labs:progress and //labs:explain run
+        run: |
+          set -euo pipefail
+          bazel run //labs:progress | tee /tmp/ladder.txt | grep -q "THE FLOW DESCENT"
+          # With nothing run yet, explain should say so rather than crash.
+          bazel run //labs:explain | grep -qi "no failing lab tests\|No lab test results"
+
+      # The ladder is copy-pasted by attendees, so every target it names has to
+      # exist. Catches a rung that was renamed in BUILD.bazel but not in the
+      # ladder — which is exactly how a lab guide rots.
+      - name: every target the ladder prints actually exists
+        run: |
+          set -euo pipefail
+          grep -oE '//labs[^ ]*:[a-zA-Z0-9_.-]+' /tmp/ladder.txt | sort -u > /tmp/targets.txt
+          echo "ladder names:"; cat /tmp/targets.txt
+          while read -r t; do
+            bazel query "$t" >/dev/null 2>&1 || { echo "::error::ladder names $t, which does not exist"; exit 1; }
+          done < /tmp/targets.txt
+
+      - name: explain decodes a real structure-test failure
+        run: |
+          set -euo pipefail
+          # Level 2's skeleton is red; its reasons live in the JUnit XML, and the
+          # console only prints `level=fatal msg=FAIL`. That is what :explain is for.
+          bazel test //labs/level2_ghost:image_structure_test || true
+          bazel run //labs:explain -- level2 | tee /tmp/explain.txt
+          grep -q "TESSDATA_PREFIX" /tmp/explain.txt

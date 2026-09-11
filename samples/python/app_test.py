@@ -17,7 +17,7 @@ class BuildGraphTest(unittest.TestCase):
 
     def test_contains_supply_chain_nodes(self):
         src = app.build_graph().source
-        for label in ("oci_image", "system layer", "slides deck"):
+        for label in ("image_manifest", "system layer", "slides deck"):
             self.assertIn(label, src)
 
     def test_self_build_edge_present(self):

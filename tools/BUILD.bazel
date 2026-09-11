@@ -3,10 +3,85 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-# bazel run //tools:local_registry  -> registry:2 on localhost:5000 (push lab).
+# --- Prebuilt service binaries (pinned in MODULE.bazel) ----------------------
+config_setting(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+)
+
+# go-containerregistry's CLI. We use exactly one subcommand of it —
+# `crane registry serve` — which is a full OCI registry in a static binary.
+alias(
+    name = "crane",
+    actual = select({
+        ":linux_amd64": "@crane_linux_amd64//:bin",
+        ":linux_arm64": "@crane_linux_arm64//:bin",
+    }),
+)
+
+# `crane` as an executable target. The alias above is a filegroup, so it cannot
+# be `bazel run`; the appendix slide ("Inspecting a layer outside Bazel") needs a
+# runnable one to read a manifest/config straight out of a registry.
+sh_binary(
+    name = "crane_cli",
+    srcs = ["crane_cli.sh"],
+    args = ["$(rlocationpath :crane)"],
+    data = [":crane"],
+    deps = ["@bazel_tools//tools/bash/runfiles"],
+)
+
+# A REAPI remote cache (gRPC + HTTP) in a static binary.
+alias(
+    name = "bazel_remote",
+    actual = select({
+        ":linux_amd64": "@bazel_remote_linux_amd64//file",
+        ":linux_arm64": "@bazel_remote_linux_arm64//file",
+    }),
+)
+
+# bazel run //tools:local_registry           -> OCI registry on localhost:5000
+# bazel run //tools:local_registry -- stop   -> shut it down
+#
+# Uses Docker's registry:2 when a daemon is available (what the deck shows), and
+# falls back to the pinned `crane registry serve` when it isn't — so the push lab
+# works on a locked-down laptop with no daemon and no network.
 sh_binary(
     name = "local_registry",
     srcs = ["local_registry.sh"],
+    args = ["$(rlocationpath :crane)"],
+    data = [":crane"],
+    deps = ["@bazel_tools//tools/bash/runfiles"],
+)
+
+# bazel run //tools:local_cache           -> remote cache on localhost:9092
+# bazel run //tools:local_cache -- stop   -> shut it down
+#
+# Backs --config=local-cache / --config=local-bwb (see .bazelrc, labs/REMOTE.md).
+sh_binary(
+    name = "local_cache",
+    srcs = ["local_cache.sh"],
+    args = ["$(rlocationpath :bazel_remote)"],
+    data = [":bazel_remote"],
+    deps = ["@bazel_tools//tools/bash/runfiles"],
+)
+
+# bazel run //tools:local_rbe   -> a real remote-EXECUTION cluster on localhost
+# Needs Docker (three containers). Backs --config=local-rbe.
+sh_binary(
+    name = "local_rbe",
+    srcs = ["local_rbe.sh"],
+    data = glob(["rbe/**"]),
 )
 
 # `bazel run //tools:render_graph -- //...` renders the dep graph to
@@ -16,4 +91,22 @@ py_binary(
     name = "render_graph",
     srcs = ["render_graph.py"],
     main = "render_graph.py",
+)
+
+# Execution platform for remote execution (`--config=rbe`, see labs/REMOTE.md).
+# Vendor-neutral: `exec_properties` is the standard REAPI channel, so this works
+# with BuildBuddy, EngFlow, BuildBarn, Buildfarm, ... Point `container-image` at
+# whatever image your worker pool runs.
+platform(
+    name = "rbe_platform",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    exec_properties = {
+        "OSFamily": "Linux",
+        # Most hosted pools have a sane default worker image. To pin your own,
+        # add (with a real digest from your registry):
+        #   "container-image": "docker://<registry>/<repo>@sha256:<digest>",
+    },
 )

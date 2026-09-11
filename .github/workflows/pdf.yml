@@ -1,0 +1,65 @@
+name: pdf
+
+# The deck's PDF is a build output, not a tracked file. `bazel run
+# //slides:export_pdf` produces it locally (gitignored); this workflow produces
+# the shareable copy. Every run uploads it as a workflow artifact, and
+# publishing a release attaches the PDF built from that tag to the release —
+# so "the PDF for version X" is always the one built from version X's sources.
+#
+# The export renders through Chromium (playwright), so unlike the `slidev build`
+# jobs this one installs the browser and its OS deps.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "slides/**"
+      - "samples/**" # transcluded into the deck as live code snippets
+      - ".github/workflows/pdf.yml"
+  pull_request:
+    paths:
+      - "slides/**"
+      - "samples/**"
+      - ".github/workflows/pdf.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: pdf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only to attach the PDF to a published release
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Export the deck to PDF
+        working-directory: slides
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run export # -> ../docs/building-without-bytes.pdf
+
+      - name: Upload the PDF as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: building-without-bytes-${{ github.sha }}
+          path: docs/building-without-bytes.pdf
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Attach the PDF to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            docs/building-without-bytes.pdf --clobber

@@ -28,10 +28,14 @@ def build_graph() -> graphviz.Digraph:
     dot.attr(rankdir="LR")
     dot.attr("node", shape="box", style="rounded")
 
-    dot.node("src", "source\n(app.py, BUILD)")
-    dot.node("deps", "pip deps\n(graphviz)")
-    dot.node("sysdep", "system layer\n(dot binary)", style="rounded,filled", fillcolor="lightyellow")
-    dot.node("image", "oci_image")
+    #region recipe
+    # Three ingredients — the layers of our sandwich:
+    dot.node("src", "source\n(app.py, BUILD)")   # app code
+    dot.node("deps", "pip deps\n(graphviz)")     # python deps
+    dot.node("sysdep", "system layer\n(dot binary)",  # the ghost: a system dep
+             style="rounded,filled", fillcolor="lightyellow")
+    #endregion
+    dot.node("image", "image_manifest")
     dot.node("slides", "slides deck")
     dot.node("registry", "registry")
 
@@ -56,15 +60,20 @@ def main(argv: list[str] | None = None) -> int:
     graph = build_graph()
     sys.stdout.write(graph.source)
 
+    #region render
     if args.render:
-        if shutil.which("dot") is None:
+        if shutil.which("dot") is None:  # the ghost dep
             sys.stderr.write(
-                "\n[skip] `dot` not found on PATH; printed DOT source only. "
+                "\n[skip] `dot` not found on PATH; "
+                "printed DOT source only. "
                 "Add the graphviz system layer to render a PNG.\n"
             )
             return 0
-        out = graph.render(outfile=args.render, format="png", cleanup=True)
+        out = graph.render(
+            outfile=args.render, format="png", cleanup=True
+        )
         sys.stderr.write(f"\n[ok] rendered {out}\n")
+    #endregion
     return 0
 
 

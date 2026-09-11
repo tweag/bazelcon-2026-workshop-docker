@@ -2,15 +2,27 @@
   "name": "building-without-bytes-slides",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.12.0"
+  },
   "scripts": {
     "dev": "slidev --open",
     "build": "slidev build",
-    "build:pages": "slidev build --base /bazelcon2026-docker-build-workshop/ --out dist",
-    "export": "slidev export --output ../docs/building-without-bytes.pdf"
+    "build:pages": "slidev build --base /bazelcon-2026-workshop-docker-build/ --out dist",
+    "export": "slidev export --per-slide --output ../docs/building-without-bytes.pdf"
   },
   "dependencies": {
     "@slidev/cli": "^52.16.0",
     "@slidev/theme-default": "^0.25.0",
-    "playwright-chromium": "^1.60.0"
+    "playwright-chromium": "^1.60.0",
+    "slidev-addon-rabbit": "^0.4.0"
+  },
+  "devDependencies": {
+    "@iconify-json/carbon": "^1.2.26",
+    "@iconify-json/ph": "^1.2.2"
+  },
+  "pnpm": {
+    "//": "Phase 1 hermetic build: no package runs install/postinstall scripts (empty allowlist). npm ignores this key.",
+    "onlyBuiltDependencies": []
   }
 }

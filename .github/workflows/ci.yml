@@ -9,17 +9,41 @@ jobs:
   bazel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      # A hosted runner has ~14 GB free and ships ~25 GB of toolchains this
+      # workshop never touches. Building every sample and lab image — each a
+      # ~600 MB tarball on top of its layers — fills the disk, and when it goes
+      # the runner dies before it can write a single log line: the failure
+      # arrives as a job with no output at all and a `No space left on device`
+      # annotation. So reclaim the space, and stop the disk cache from keeping
+      # a second copy of every output — .bazelrc line 16 asks CI to do exactly
+      # that, and until now nothing did.
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
 
       - name: Install system deps (dot for the graph demo)
         run: sudo apt-get update && sudo apt-get install -y graphviz
 
       # Bazelisk ships on GitHub runners and reads .bazelversion.
-      - name: Build everything
-        run: bazel build //...
+      #
+      # Deliberately NOT `//...`: that pulls the Node toolchain (116 MB) and the
+      # npm graph in to build the deck, which this job does not need. Measured:
+      # //... loads 1,668 packages / 20,107 targets; the patterns below load 753
+      # / 7,749. The hermetic deck build still runs — in the `slides` job, which
+      # already pays for Node.
+      - name: Build everything except the deck
+        run: |
+          bazel build //samples/... //labs/... //benchmark/... //tools/... //slides:srcs
 
-      - name: Test everything (TASK §5.1)
-        run: bazel test //... --test_output=errors
+      - name: Test everything except the deck (TASK §5.1)
+        run: |
+          bazel test //samples/... //labs/... //benchmark/... //tools/... //slides:srcs \
+            --test_output=errors
 
       # TASK §5.3 — the self-build invariant: the deck must depend on the
       # samples it transcludes, or the "slides are a build artifact" thesis
@@ -34,20 +58,87 @@ jobs:
       # image digest (content-addressable, not a daemon snapshot).
       - name: Reproducible image digest
         run: |
-          bazel build //samples/python:image
-          a=$(sha256sum bazel-bin/samples/python/image/index.json | cut -d' ' -f1)
+          # Read the digest from the `digest` output group, not from a path
+          # under bazel-bin/samples/python/image/ — rules_img writes no such
+          # directory, so the old sha256sum silently failed and compared two
+          # empty strings, i.e. the check passed no matter what.
+          bazel build //samples/python:image --output_groups=digest
+          a=$(cat bazel-bin/samples/python/image_digest)
           bazel clean
-          bazel build //samples/python:image
-          b=$(sha256sum bazel-bin/samples/python/image/index.json | cut -d' ' -f1)
+          bazel build //samples/python:image --output_groups=digest
+          b=$(cat bazel-bin/samples/python/image_digest)
           echo "digest A=$a"
           echo "digest B=$b"
+          test -n "$a"
           test "$a" = "$b"
+
+  # The local-infrastructure labs (labs/REMOTE.md). Neither of these paths had
+  # any test coverage before: the registry was a docs-only workflow, and the
+  # remote-cache material pointed at a hosted service nobody could run in CI.
+  # Both now run from pinned static binaries, so this job needs no services.
+  remote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same reason as the `bazel` job above: the images do not fit on a
+      # stock runner next to a disk cache, and overflowing kills it silently.
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
+
+      - name: The cache actually serves hits
+        run: |
+          set -euo pipefail
+          bazel run //tools:local_cache
+          bazel build --config=local-cache //samples/python:image   # cold: upload
+          bazel clean
+          # Everything local is gone, so any hit here came off the wire.
+          bazel build --config=local-cache //samples/python:image 2>&1 \
+            | tee /tmp/warm.log
+          grep -q "remote cache hit" /tmp/warm.log
+
+      - name: Building without the bytes really skips the bytes
+        run: |
+          set -euo pipefail
+          # Populate the cache for THIS target first. The tarball action runs
+          # locally, so unless its own result is already a cache hit Bazel has
+          # to stage every layer byte as an input and the measurement below is
+          # meaningless. REMOTE.md gets this for free: its §1 builds
+          # //samples/... — which includes :image.tar — before §2 measures.
+          bazel build --config=local-cache //samples/python:image.tar
+          bazel clean
+          bazel build --config=local-bwb //samples/python:image.tar
+          # 258 MB with a normal build; a few hundred KB without the bytes.
+          bytes=$(du -sb bazel-out/k8-fastbuild/bin/samples/python | cut -f1)
+          echo "bazel-out/.../samples/python = $bytes bytes"
+          test "$bytes" -lt 10000000
+
+      - name: Push to the hermetic registry, and dedup on the second push
+        run: |
+          set -euo pipefail
+          bazel run //tools:local_registry -- --hermetic
+          bazel run //samples/python:push
+          curl -fsS http://localhost:5000/v2/bwb/python-graphviz/tags/list \
+            | tee /dev/stderr | grep -q latest
+          # Same inputs -> same image -> the registry already has every blob.
+          bazel run //samples/python:push 2>&1 | tee /tmp/push2.log
+          grep -q "blob transfers" /tmp/push2.log
+
+      - name: Tear down
+        if: always()
+        run: |
+          bazel run //tools:local_cache -- stop || true
+          bazel run //tools:local_registry -- stop || true
 
   slides:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
       - name: Build the deck (transclusion must resolve)
@@ -55,3 +146,23 @@ jobs:
         run: |
           npm ci
           npx slidev build --out dist
+
+      # `npm ci` above resolves package-lock.json; `npm_translate_lock` in
+      # MODULE.bazel resolves the committed pnpm-lock.yaml. Dependabot only ever
+      # updates the first, so without this a dependency bump lands in the npm
+      # build and silently leaves Bazel pinned to the old — vulnerable — versions,
+      # with both jobs still green. Re-derive the pnpm lock and fail if it drifted.
+      - name: The two lockfiles must agree
+        run: |
+          bazel run -- @pnpm//:pnpm --dir "$PWD/slides" import
+          git diff --exit-code -- slides/pnpm-lock.yaml || {
+            echo "::error file=slides/pnpm-lock.yaml::Stale pnpm lock. Re-run: bazel run -- @pnpm//:pnpm --dir \"\$PWD/slides\" import"
+            exit 1
+          }
+
+      # The repo's thesis is that the deck is a build artifact of the same graph
+      # that builds the images — so the *Bazel* deck build has to stay covered.
+      # It lives here rather than in the `bazel` job because this is the job that
+      # already has a reason to download a Node toolchain.
+      - name: Build the deck hermetically, through Bazel
+        run: bazel build //slides:build

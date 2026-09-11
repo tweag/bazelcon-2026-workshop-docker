@@ -1,0 +1,48 @@
+# A real remote-execution cluster on your laptop: Buildfarm + Redis.
+# Driven by `bazel run //tools:local_rbe`; see labs/REMOTE.md.
+#
+# Three containers is the floor for remote EXECUTION (as opposed to a remote
+# cache, which //tools:local_cache serves from a single static binary):
+# a backplane to queue operations, a server to speak REAPI to Bazel, and at
+# least one worker to actually run the actions.
+#
+# Tags are pinned, not `latest` — a workshop that breaks because upstream
+# published a new image is not a workshop.
+services:
+  redis:
+    image: redis:7.2.4
+    container_name: bwb-rbe-redis
+    ports:
+      - "6379:6379"
+
+  server:
+    image: bazelbuild/buildfarm-server:2.17.1
+    container_name: bwb-rbe-server
+    # CONFIG_PATH, not a positional argument. Buildfarm 2.x silently ignores an
+    # unrecognised argv and falls back to its bundled example config (which points
+    # redis at localhost) — the failure then looks like a Redis outage, not a typo.
+    environment:
+      CONFIG_PATH: /config/config.yml
+    volumes:
+      - ./config:/config:ro
+    ports:
+      - "8980:8980"
+    depends_on:
+      - redis
+
+  # The worker executes actions directly on its own filesystem, so its image is
+  # the "platform" your build sees. It is Ubuntu-based, which is why it can run
+  # this repo's actions at all: py_binary launchers, container_structure_test's
+  # generated launcher and rules_distroless' genrules all need a shell.
+  worker:
+    image: bazelbuild/buildfarm-worker:2.17.1
+    container_name: bwb-rbe-worker
+    environment:
+      CONFIG_PATH: /config/config.yml
+    volumes:
+      - ./config:/config:ro
+    ports:
+      - "8981:8981"
+    depends_on:
+      - redis
+      - server

@@ -1,0 +1,86 @@
+# Level 2 — reference solution (green). The fills vs. the skeleton: the apt
+# layer (the real engine + data) and the TESSDATA_PREFIX pointer. No RUN, no
+# daemon, no network — the layer is pinned in tesseract.lock.json.
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+load("@labs_pypi//:requirements.bzl", "requirement")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img_images.bzl", "image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+py_binary(
+    name = "app",
+    srcs = ["app.py"],
+    imports = ["."],
+    main = "app.py",
+    deps = [
+        requirement("pytesseract"),
+        requirement("pillow"),
+    ],
+)
+
+# Same payload test as the skeleton's, so `bazel test //labs/...` (and CI)
+# actually exercises it.
+py_test(
+    name = "app_test",
+    size = "small",
+    srcs = ["//labs/level2_ghost:app_test.py"],
+    imports = [".."],  # srcs from the parent package land in ../, not here
+    main = "app_test.py",
+    tags = ["surface"],
+    deps = [":app"],
+)
+
+# The abyss fill: ship something to actually OCR, so the image can prove the
+# engine works rather than just prove the binary is present.
+#   docker run --rm bwb/level2-ghost --ocr /app/sample.png   ->  HERMETIC OCR
+pkg_tar(
+    name = "app_layer",
+    srcs = [
+        ":app",
+        "//labs/level2_ghost:sample.png",
+    ],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+layer_from_tar(name = "app_layer_img", src = ":app_layer")
+
+# The fill: wrap the hermetic engine + data tar as a layer.
+layer_from_tar(name = "tesseract_layer_img", src = "@tesseract_apt//:flat")
+
+image_manifest(
+    name = "image",
+    base = image("python_base_img"),
+    entrypoint = ["/app/app"],
+    env = {"TESSDATA_PREFIX": "/usr/share/tesseract-ocr/5/tessdata/"},  # deep
+    layers = [
+        ":app_layer_img",
+        ":tesseract_layer_img",  # surface: the hermetic engine + eng data
+    ],
+)
+
+image_load(
+    name = "image_load",
+    image = ":image",
+    tag = "bwb/level2-ghost:latest",
+)
+
+filegroup(
+    name = "image.tar",
+    srcs = [":image_load"],
+    output_group = "tarball",
+)
+
+container_structure_test(
+    name = "image_structure_test",
+    size = "small",
+    configs = ["//labs/level2_ghost:image_test.yaml"],
+    driver = "tar",
+    image = ":image.tar",
+    tags = ["deep"],
+)

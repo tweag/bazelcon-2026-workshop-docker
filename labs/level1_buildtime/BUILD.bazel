@@ -1,0 +1,85 @@
+# Level 1 — The Build-Time Trap (cryptography).   [SKELETON — fill the TODOs]
+#
+# The descent (run each; green = rung cleared):
+#   surface : bazel test  //labs/level1_buildtime:app_test          (RED now)
+#   deep    : bazel test  //labs/level1_buildtime:image_layer_test   (RED now)
+#   abyss   : see HINT.md  (force + diagnose the sdist fallback)
+#
+# Stuck? read HINT.md, or peek at //labs/level1_buildtime/solution.
+# Why is it red?  bazel run //labs:explain -- level1
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@labs_pypi//:requirements.bzl", "requirement")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img_images.bzl", "image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "app.py",
+    "app_test.py",
+    "layer_test.py",
+])
+
+py_binary(
+    name = "app",
+    srcs = ["app.py"],
+    imports = ["."],
+    main = "app.py",
+    # TODO(surface): `import cryptography` fails — pip never fetched the wheel.
+    # Add the cryptography wheel from the labs hub. Hint: requirement("...").
+    deps = [],
+)
+
+# SURFACE — turns green the moment :app can import cryptography.
+py_test(
+    name = "app_test",
+    size = "small",
+    srcs = ["app_test.py"],
+    imports = ["."],
+    tags = ["manual", "surface"],
+    deps = [":app"],
+)
+
+pkg_tar(
+    name = "app_layer",
+    srcs = [":app"],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+layer_from_tar(
+    name = "app_layer_img",
+    src = ":app_layer",
+)
+
+image_manifest(
+    name = "image",
+    base = image("python_base_img"),
+    entrypoint = ["/app/app"],
+    layers = [":app_layer_img"],
+    tags = ["manual", "deep"],
+)
+
+# DEEP — open the layer and prove the *prebuilt* wheel is really inside it (and
+# that no sdist was unpacked). RED until the wheel is a dep.
+# NOTE: `build_test` alone can't catch this — an image with a missing Python dep
+# still assembles perfectly. Looking inside the layer is the only honest check.
+py_test(
+    name = "image_layer_test",
+    size = "small",
+    srcs = ["layer_test.py"],
+    args = ["$(rootpath :app_layer)"],
+    data = [":app_layer"],
+    main = "layer_test.py",
+    tags = ["manual", "deep"],
+)
+
+# Sanity: the image graph still analyzes and every layer builds.
+build_test(
+    name = "image_build_test",
+    tags = ["manual", "deep"],
+    targets = [":image"],
+)

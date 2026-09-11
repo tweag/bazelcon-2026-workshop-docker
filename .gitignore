@@ -13,4 +13,6 @@ slides/graphs/*.dot
 # is already tracked, so git keeps it despite this glob.
 slides/graphs/*.png
 *.pdf
-!docs/**/*.pdf
+
+# Python bytecode from running the samples outside Bazel
+__pycache__/

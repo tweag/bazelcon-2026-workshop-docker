@@ -2,7 +2,7 @@
 
 Single workspace that builds the container-image samples, the benchmark,
 and the Slidev presentation. Versions are pinned to the latest BCR releases
-(Requirement #8: track latest rules_oci / rules_img).
+(Requirement #8: track latest rules_img).
 """
 
 module(
@@ -11,7 +11,6 @@ module(
 )
 
 # --- Core rulesets (latest BCR releases as of scaffolding) ---
-bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "rules_img", version = "0.3.12")
 bazel_dep(name = "rules_python", version = "2.0.2")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
@@ -22,6 +21,60 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 bazel_dep(name = "container_structure_test", version = "1.22.1")
 
+# Node/JS toolchain for the hermetic Slidev deck build (TASK §3.8, Phase 1).
+bazel_dep(name = "aspect_rules_js", version = "3.2.3")
+bazel_dep(name = "rules_nodejs", version = "6.7.3")
+
+# --- Prebuilt service binaries for the local-infrastructure labs -------------
+# The workshop's registry / remote-cache labs used to need Docker (registry:2)
+# or a hosted account (BuildBuddy). These two pinned static binaries make both
+# runnable offline, as ordinary Bazel targets — see labs/REMOTE.md.
+#
+# Upgrading: bump the version, then take the new sha256 from the release's
+# published checksums.txt (go-containerregistry) or by hashing the asset
+# (bazel-remote publishes no checksums file).
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+# crane — go-containerregistry's CLI. `crane registry serve` is a real OCI
+# registry in one static binary, so //tools:local_registry works with no daemon.
+[
+    http_archive(
+        name = "crane_linux_" + arch,
+        build_file_content = """exports_files(["crane"])
+
+filegroup(
+    name = "bin",
+    srcs = ["crane"],
+    visibility = ["//visibility:public"],
+)
+""",
+        sha256 = sha,
+        urls = ["https://github.com/google/go-containerregistry/releases/download/v0.22.1/go-containerregistry_Linux_%s.tar.gz" % asset],
+    )
+    for arch, asset, sha in [
+        ("amd64", "x86_64", "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0"),
+        ("arm64", "arm64", "898c0cff975f898a33e8c4580bdafb0e7c02c7faa33374e946762f97c4ab7110"),
+    ]
+]
+
+# bazel-remote — a REAPI remote cache (gRPC + HTTP) in one static binary. This
+# is what makes `--config=local-cache`, `--remote_download_minimal` and
+# rules_img's lazy push strategy demonstrable without an account.
+[
+    http_file(
+        name = "bazel_remote_linux_" + arch,
+        executable = True,
+        sha256 = sha,
+        urls = ["https://github.com/buchgr/bazel-remote/releases/download/v2.6.2/bazel-remote-2.6.2-linux-%s" % arch],
+    )
+    for arch, sha in [
+        ("amd64", "62e236bf8396e69396928e0d0c32062fbd5575f20fe55dc10a82eb791297e1a0"),
+        ("arm64", "b2cabd5bf674e8d0649de2c95dddfea8d875db1a06ed9d431674c9293df273ed"),
+    ]
+]
+
 # --- Python toolchain ---
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
@@ -30,45 +83,122 @@ python.toolchain(
 )
 use_repo(python)
 
+# The deck transcludes the region below: slides/slides.md `<<< ../MODULE.bazel#pip_hub`.
+#region pip_hub
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "pypi",
     python_version = "3.12",
     requirements_lock = "//samples/python:requirements_lock.txt",
 )
+#endregion
 use_repo(pip, "pypi")
 
-# --- Base image for the OCI / img samples ---
-oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
-oci.pull(
-    name = "python_base",
-    image = "index.docker.io/library/python:3.12-slim-bookworm",
-    digest = "sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf",
-    platforms = [
-        "linux/amd64",
-        "linux/arm64/v8",  # this image's arm64 manifest carries the v8 variant
-    ],
+# Lab payloads for the "Flow descent" labs (TASK §10), kept in their own hub so
+# they don't bloat the samples' deps. Re-lock: bazel run //labs:requirements.update
+pip.parse(
+    hub_name = "labs_pypi",
+    python_version = "3.12",
+    requirements_lock = "//labs:requirements_lock.txt",
 )
-use_repo(oci, "python_base", "python_base_linux_amd64", "python_base_linux_arm64_v8")
+use_repo(pip, "labs_pypi")
 
-# Same base, pulled through rules_img's own extension, for the //samples/rules_img
-# comparison (same layer, different ruleset).
+# --- Node toolchain + npm deps for the Slidev deck (hermetic, TASK §3.8) ---
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node.toolchain(node_version = "24.13.0")  # matches slides/.nvmrc "24"
+use_repo(node, "nodejs_toolchains")
+
+# pnpm binary: npm_translate_lock runs `pnpm import` to convert package-lock.json.
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
+pnpm.pnpm(name = "pnpm")
+use_repo(pnpm, "pnpm")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    # Committed pnpm lock (generated from slides/package-lock.json via
+    # `bazel run -- @pnpm//:pnpm --dir "$PWD/slides" import`) so fetches are offline
+    # and deterministic — no `pnpm import` at the loading phase. The path must be
+    # absolute: `bazel run` leaves cwd in the runfiles tree, so a relative --dir
+    # resolves there and fails with ENOENT. CI asserts this lock is current (the
+    # "two lockfiles must agree" step in ci.yml's `slides` job).
+    pnpm_lock = "//slides:pnpm-lock.yaml",
+    # Phase 1 is browser-free and needs no postinstall scripts (Vite 8 uses
+    # Rolldown's native optional-dep binaries, not lifecycle hooks). Disabling all
+    # hooks keeps the build offline — notably it skips playwright-chromium's
+    # browser download. Phase 2 will enable the browser deliberately.
+    run_lifecycle_hooks = False,
+    # Slidev loads @vue/compiler-sfc via a dynamic import in local-pkg; under the
+    # strict pnpm node_modules it must be hoisted to the root to be resolvable.
+    public_hoist_packages = {
+        "@vue/compiler-sfc": ["slides"],
+        # @slidev/client imports markdown-it-github-alerts' CSS by subpath.
+        "markdown-it-github-alerts": ["slides"],
+    },
+    verify_node_modules_ignored = "//:.bazelignore",
+)
+use_repo(npm, "npm")
+
+# --- Base image (rules_img's own pull extension) ---
+# `layer_handling = "lazy"` (not the default "shallow") keeps the base blobs
+# available for the docker-save tarball the daemonless structure test reads.
+# The deck transcludes the region below: slides.md `<<< ../MODULE.bazel#base_pull`
+# — keep it a tight 10 lines, it is shown at full slide width.
+#region base_pull
 images = use_extension("@rules_img//img:extensions.bzl", "images")
 images.pull(
     name = "python_base_img",
+    layer_handling = "lazy",
     registry = "index.docker.io",
     repository = "library/python",
     digest = "sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf",
     tag = "3.12-slim-bookworm",
 )
 use_repo(images, "rules_img_images.bzl")
+#endregion
 
 # Hermetic Debian packages (the `dot` system dep as a pinned, content-addressed
 # layer) via rules_distroless. Regenerate the lock: bazel run @graphviz_apt//:lock
+# The deck transcludes the region below: slides/slides.md `<<< ../MODULE.bazel#apt_ext`.
+#region apt_ext
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
 apt.install(
     name = "graphviz_apt",
     lock = "//samples/distroless:graphviz.lock.json",
     manifest = "//samples/distroless:graphviz.yaml",
 )
+#endregion
 use_repo(apt, "graphviz_apt")
+
+# Level 2 lab — the `tesseract` engine + English data as a hermetic layer.
+# Regenerate: bazel run @tesseract_apt//:lock
+#
+# (//samples/distroless builds FROM SCRATCH, so it deliberately does *not* set
+# mergedusr: with no base there is no /usr symlink, and the ELF interpreter has
+# to stay at its canonical /lib64 path.)
+#
+# The deck transcludes the region below: slides/slides.md
+# `<<< ../MODULE.bazel#mergedusr` — keep it tight, it shares a two-column slide.
+#region mergedusr
+# `mergedusr` is what makes an apt layer safe to stack ON TOP OF a distro base.
+# Debian's .debs ship files under /lib; the base has /lib as a SYMLINK into
+# /usr. Layering a real directory over a symlink REPLACES it, which silently
+# amputates the base's /usr/lib — every binary then fails to exec.
+apt.install(
+    name = "tesseract_apt",
+    lock = "//labs/level2_ghost:tesseract.lock.json",
+    manifest = "//labs/level2_ghost:tesseract.yaml",
+    mergedusr = True,  # rewrites ./lib -> ./usr/lib so the layers compose
+)
+#endregion
+use_repo(apt, "tesseract_apt")
+
+# Level 3 lab — a CPU-only OpenCL stack (POCL) as a hermetic layer.
+# Regenerate: bazel run @pocl_apt//:lock
+apt.install(
+    name = "pocl_apt",
+    lock = "//labs/level3_hardware:pocl.lock.json",
+    manifest = "//labs/level3_hardware:pocl.yaml",
+    mergedusr = True,  # see the tesseract_apt note above
+)
+use_repo(apt, "pocl_apt")

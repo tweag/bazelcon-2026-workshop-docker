@@ -1,0 +1,12 @@
+# Daemonless validation (tar driver) for the Level 3 image.
+# DEEP: the OpenCL plumbing must be in the image. (Paths are amd64; the arm64
+# layer lands under aarch64-linux-gnu — see README.)
+schemaVersion: "2.0.0"
+
+fileExistenceTests:
+  - name: "OpenCL ICD loader (libOpenCL) is bundled"
+    path: "/usr/lib/x86_64-linux-gnu/libOpenCL.so.1"
+    shouldExist: true
+  - name: "POCL CPU ICD is registered"
+    path: "/etc/OpenCL/vendors/pocl.icd"
+    shouldExist: true
