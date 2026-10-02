@@ -1,11 +1,5 @@
-# Debian packages for the hermetic `tesseract` layer (Level 2 — the "ghost").
-# pytesseract is pure Python; the real engine is this apt binary + its language
-# data. We materialize both as a pinned, content-addressed layer.
-#
-# Regenerate the lockfile after any change:
-#   bazel run @tesseract_apt//:lock
-#
-# Pinned to the same Debian snapshot as the graphviz sample for reproducibility.
+# Debian packages for the hermetic `tesseract` layer (Level 2).
+# Re-lock after any change: bazel run @tesseract_apt//:lock
 version: 1
 
 sources:

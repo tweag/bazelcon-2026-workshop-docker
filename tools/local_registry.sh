@@ -84,6 +84,13 @@ start_hermetic() {
     echo "registry already running on localhost:$PORT  (hermetic crane)"
     return
   fi
+  # Our own registry:2 from an earlier plain run (the deck does exactly that) is
+  # just as good a registry; reuse it rather than calling it a stranger.
+  if command -v docker >/dev/null 2>&1 &&
+     docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$CONTAINER"; then
+    echo "registry already running on localhost:$PORT  (registry:2; '-- stop' first to switch to crane)"
+    return
+  fi
   # Somebody else's process on the port is the common workshop failure. Say so
   # instead of starting a server that silently loses the bind race.
   if port_busy; then

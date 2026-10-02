@@ -18,20 +18,16 @@ const { currentLayout } = useNav()
 // Slidev gives the first slide the `cover` layout by default, which is what the
 // `bazel-cover` class then restyles into the BazelCon title card.
 const isDark = computed(() => ['cover', 'section', 'statement'].includes(currentLayout.value))
-// The cover already carries the BazelCon lockup and a "Tweag by Modus Create"
-// byline, so the wordmark stays off it rather than doubling up — which frees the
-// bottom-left corner there for the footer text, under the title block.
-const isCover = computed(() => currentLayout.value === 'cover')
 </script>
 
 <template>
   <div class="deck-footer-layer">
-    <div class="deck-footer" :class="{ dark: isDark, cover: isCover }">
+    <div class="deck-footer" :class="{ dark: isDark }">
       BazelCon 2026 ·
       <a href="https://github.com/tweag/bazelcon-2026-workshop-docker-build"
          target="_blank" rel="noopener">github.com/tweag/bazelcon-2026-workshop-docker-build</a>
     </div>
-    <div v-if="!isCover" class="deck-logo" :class="{ dark: isDark }" aria-hidden="true" v-html="tweagLogo" />
+    <div class="deck-logo" :class="{ dark: isDark }" aria-hidden="true" v-html="tweagLogo" />
   </div>
 </template>
 
@@ -55,12 +51,6 @@ const isCover = computed(() => currentLayout.value === 'cover')
 .deck-footer.dark {
   color: var(--bc-lime-light);
   opacity: 0.85;
-}
-/* On the cover, sit bottom-left, under the title block — the corner the
-   wordmark would otherwise hold. */
-.deck-footer.cover {
-  left: 1.1rem;
-  right: auto;
 }
 .deck-footer a {
   color: inherit;

@@ -269,6 +269,35 @@
   --slidev-code-line-height: 1.55;
 }
 
+/* Point at a line without hiding the rest. Slidev's `{N}` line highlight dims
+ * every other line to opacity 0.3, which makes the surrounding code unreadable
+ * even though it's part of the lesson. Inside .code-pin, all lines stay at full
+ * strength; the highlighted line gets a lime band, and an optional `--pin`
+ * string set on the wrapper (style="--pin: '◀ …'") adds a callout that points
+ * at it. The full-width inline-block is the same trick VitePress uses for its
+ * highlighted lines. */
+.code-pin .slidev-code-dishonored { opacity: 1; }
+.code-pin .slidev-code-highlighted {
+  display: inline-block;
+  position: relative;
+  width: calc(100% + 2 * var(--slidev-code-padding));
+  margin: 0 calc(-1 * var(--slidev-code-padding));
+  padding: 0 var(--slidev-code-padding);
+  background: rgba(124, 179, 66, 0.22);        /* --bc-lime, tinted */
+  box-shadow: inset 4px 0 0 var(--bc-lime);
+}
+.code-pin .slidev-code-highlighted::after {
+  content: var(--pin, none);
+  position: absolute;
+  right: var(--slidev-code-padding);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--bc-forest);
+}
+
 /* --- Reference cards: linked conference-talk thumbnails ------------------ */
 /* These are the deck's only photographic assets — YouTube thumbnails on a page
  * of antique ink-and-watercolor plates. Framed as *citations*, not illustrations:
@@ -408,3 +437,29 @@
 .verb-tag { margin-top: 0.35rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .verb-done .verb-tag { color: var(--bc-forest); }
 .verb-now .verb-tag { color: var(--bc-link); }
+
+/* two-cols-header's columns are `1fr`, whose minimum is the content's
+ * min-content width, so one long code line (a bazel-bin path) could widen the
+ * whole slide past the canvas and clip it on the right. min-width: 0 keeps the
+ * columns at half width; a wide line scrolls inside its own code block. */
+.two-cols-header > .col-left,
+.two-cols-header > .col-right { min-width: 0; }
+
+/* Labels over a plate, as live text instead of baked into the art. Text baked
+ * into a generated image shrinks with it, down to ~5px on the 980px canvas, so
+ * nothing past the front row can read it on a 1080p projector. Each <span> is
+ * centred on its point, given in percent of the image (style="left:…; top:…"),
+ * so the labels track the image at any size. */
+.plate-labels { position: relative; display: inline-block; }
+.plate-labels img { display: block; }
+.plate-labels > span {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--bc-forest);
+  line-height: 1.15;
+  text-align: center;
+}

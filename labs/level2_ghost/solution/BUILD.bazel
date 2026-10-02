@@ -31,11 +31,10 @@ py_test(
     srcs = ["//labs/level2_ghost:app_test.py"],
     imports = [".."],  # srcs from the parent package land in ../, not here
     main = "app_test.py",
-    tags = ["surface"],
     deps = [":app"],
 )
 
-# The abyss fill: ship something to actually OCR, so the image can prove the
+# The stretch fill: ship something to actually OCR, so the image can prove the
 # engine works rather than just prove the binary is present.
 #   docker run --rm bwb/level2-ghost --ocr /app/sample.png   ->  HERMETIC OCR
 pkg_tar(
@@ -48,7 +47,7 @@ pkg_tar(
     package_dir = "/app",
 )
 
-layer_from_tar(name = "app_layer_img", src = ":app_layer")
+layer_from_tar(name = "app_layer_img", src = ":app_layer", optimize = True)
 
 # The fill: wrap the hermetic engine + data tar as a layer.
 layer_from_tar(name = "tesseract_layer_img", src = "@tesseract_apt//:flat")
@@ -57,10 +56,10 @@ image_manifest(
     name = "image",
     base = image("python_base_img"),
     entrypoint = ["/app/app"],
-    env = {"TESSDATA_PREFIX": "/usr/share/tesseract-ocr/5/tessdata/"},  # deep
+    env = {"TESSDATA_PREFIX": "/usr/share/tesseract-ocr/5/tessdata/"},  # task 2
     layers = [
         ":app_layer_img",
-        ":tesseract_layer_img",  # surface: the hermetic engine + eng data
+        ":tesseract_layer_img",  # the hermetic engine + eng data
     ],
 )
 
@@ -78,9 +77,8 @@ filegroup(
 
 container_structure_test(
     name = "image_structure_test",
-    size = "small",
+    size = "medium",
     configs = ["//labs/level2_ghost:image_test.yaml"],
     driver = "tar",
     image = ":image.tar",
-    tags = ["deep"],
 )

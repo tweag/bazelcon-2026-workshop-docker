@@ -1,0 +1,16 @@
+# Debian packages for the hermetic `dot` layer (Level 0), on the base's bookworm.
+# Re-lock after any change: bazel run @graphviz_lab_apt//:lock
+version: 1
+
+sources:
+  - channel: bookworm main
+    urls:
+      - https://snapshot-cloudflare.debian.org/archive/debian/20240210T223313Z
+      - https://snapshot.debian.org/archive/debian/20240210T223313Z
+
+archs:
+  - "amd64"
+  - "arm64"
+
+packages:
+  - "graphviz"   # the `dot` binary + its libraries

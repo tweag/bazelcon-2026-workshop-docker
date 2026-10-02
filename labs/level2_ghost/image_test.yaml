@@ -1,20 +1,18 @@
-# Daemonless validation (tar driver) for the Level 2 ghost image.
-# Shared by the skeleton (RED — these fail until you add the layer) and the
-# solution (GREEN).
+# Level 2 checks (tar driver, daemonless). Shared by the skeleton and solution/.
 schemaVersion: "2.0.0"
 
 fileExistenceTests:
-  # SURFACE — the engine binary pip never installed.
+  # Task 1 — the engine binary pip never installed.
   - name: "tesseract engine binary is bundled"
     path: "/usr/bin/tesseract"
     shouldExist: true
-  # DEEP — the runtime data dependency (English traineddata).
+  # Task 1 — its language data.
   - name: "english language data is bundled"
     path: "/usr/share/tesseract-ocr/5/tessdata/eng.traineddata"
     shouldExist: true
 
 metadataTest:
-  # DEEP — tesseract can't find its data without this pointer.
+  # Task 2 — tesseract can't find its data without this pointer.
   envVars:
     - key: "TESSDATA_PREFIX"
       value: "/usr/share/tesseract-ocr/5/tessdata/"

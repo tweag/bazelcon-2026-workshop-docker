@@ -1,9 +1,4 @@
-"""Playground payload — a container that reports on itself.
-
-Nothing here is a puzzle. It builds, tests and runs green out of the box; it
-exists so you have somewhere to *change* things and watch the graph react.
-See README.md for a list of things to try.
-"""
+"""Playground payload: a container that reports on itself. See README.md."""
 
 import os
 import platform
@@ -11,8 +6,7 @@ import sys
 
 CONFIG_PATH = os.environ.get("PLAYGROUND_CONFIG", "/etc/playground/greeting.txt")
 
-# Libraries already pinned in //labs:requirements_lock.txt. Add one to the
-# py_binary's deps in BUILD.bazel and watch it flip from "missing" to a version.
+# Pinned in //labs:requirements_lock.txt; add one to deps to see it appear.
 OPTIONAL_DEPS = ["cryptography", "PIL", "pytesseract", "numpy", "pyopencl"]
 
 

@@ -1,12 +1,4 @@
-# Playground — no puzzle, no TODOs, nothing to fix. This package is green and
-# stays green; it is here so you have a real, working image to *change*.
-#
-#   bazel test //labs/playground/...                 # everything, ~2s + ~15s
-#   bazel run  //labs/playground:app                 # the payload, no image
-#   bazel run  //labs/playground:image_load          # -> local Docker daemon
-#   docker run --rm bwb/playground
-#
-# Things to try are listed in README.md.
+# Playground — a green, working image to change. Tasks to try: README.md.
 load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@rules_img//img:image.bzl", "image_manifest")
 load("@rules_img//img:layer.bzl", "layer_from_tar")
@@ -17,9 +9,7 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 
 package(default_visibility = ["//visibility:public"])
 
-# The payload. `deps` is deliberately empty: add
-# `load("@labs_pypi//:requirements.bzl", "requirement")` at the top and then
-# e.g. `requirement("cryptography")` here, re-run, and watch the report change.
+# `deps` is deliberately empty (README task 3).
 py_binary(
     name = "app",
     srcs = ["app.py"],
@@ -36,8 +26,7 @@ py_test(
     deps = [":app"],
 )
 
-# Layer 1 — the application (interpreter + your code + any deps you add).
-# Edit app.py and only this layer's digest changes.
+# Layer 1 — the app: interpreter + code + deps.
 pkg_tar(
     name = "app_layer",
     srcs = [":app"],
@@ -45,8 +34,7 @@ pkg_tar(
     package_dir = "/app",
 )
 
-# Layer 2 — config, on its own so editing it does NOT rebuild the app layer.
-# This split is the whole "software catering" idea, in nine lines.
+# Layer 2 — config, split out so editing it doesn't rebuild the app layer.
 pkg_tar(
     name = "config_layer",
     srcs = ["greeting.txt"],
@@ -56,6 +44,7 @@ pkg_tar(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
+    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
 )
 
 layer_from_tar(
@@ -89,7 +78,7 @@ filegroup(
 # Daemonless validation. Add your own assertions to image_test.yaml.
 container_structure_test(
     name = "image_structure_test",
-    size = "small",
+    size = "medium",
     configs = ["image_test.yaml"],
     driver = "tar",
     image = ":image.tar",

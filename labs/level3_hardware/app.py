@@ -1,10 +1,4 @@
-"""Level 3 payload — the hardware wall.
-
-`pip install pyopencl` gives you bindings, but OpenCL needs an *ICD* (a driver)
-to find any compute device. With none, there's no device to run on — the wall.
-POCL is a software ICD that exposes the CPU as an OpenCL device, so the same
-code runs anywhere we bundle it; a real GPU stays a host-level runtime contract.
-"""
+"""Level 3 payload: an OpenCL kernel that needs an ICD (POCL on CPU, or a GPU)."""
 
 import numpy as np
 

@@ -67,7 +67,7 @@ sh_binary(
 # bazel run //tools:local_cache           -> remote cache on localhost:9092
 # bazel run //tools:local_cache -- stop   -> shut it down
 #
-# Backs --config=local-cache / --config=local-bwb (see .bazelrc, labs/REMOTE.md).
+# Backs --config=local-cache / --config=local-bwb (see .bazelrc, labs/remote/README.md).
 sh_binary(
     name = "local_cache",
     srcs = ["local_cache.sh"],
@@ -93,7 +93,7 @@ py_binary(
     main = "render_graph.py",
 )
 
-# Execution platform for remote execution (`--config=rbe`, see labs/REMOTE.md).
+# Execution platform for remote execution (`--config=rbe`, see labs/remote/README.md).
 # Vendor-neutral: `exec_properties` is the standard REAPI channel, so this works
 # with BuildBuddy, EngFlow, BuildBarn, Buildfarm, ... Point `container-image` at
 # whatever image your worker pool runs.

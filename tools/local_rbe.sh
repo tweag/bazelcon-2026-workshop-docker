@@ -9,7 +9,7 @@
 # Non-hermetic by design: it needs a Docker daemon. Unlike //tools:local_cache
 # (one static binary, no daemon), remote execution needs a worker whose OS can
 # actually run your actions — so the worker IS a container image, and choosing
-# it is part of the lesson. See labs/REMOTE.md.
+# it is part of the lesson. See labs/remote/README.md.
 set -euo pipefail
 
 cd "${BUILD_WORKSPACE_DIRECTORY:?must be run via 'bazel run //tools:local_rbe'}/tools/rbe"
@@ -46,11 +46,22 @@ case "${1:-up}" in
   up)
     compose up -d
     echo "waiting for the scheduler on localhost:8980 ..."
+    # Docker's port proxy accepts TCP before Buildfarm listens, so an open port
+    # proves nothing. A gRPC server answers a bare HTTP/2 request (415); until
+    # then curl gets a reset (000). Without curl, fall back to the port check.
+    ready() {
+      if command -v curl >/dev/null 2>&1; then
+        [ "$(curl -s -o /dev/null -m 2 -w '%{http_code}' --http2-prior-knowledge \
+              http://127.0.0.1:8980/ 2>/dev/null)" != 000 ]
+      else
+        (exec 3<>/dev/tcp/127.0.0.1/8980) >/dev/null 2>&1
+      fi
+    }
     for _ in $(seq 1 120); do
-      (exec 3<>/dev/tcp/127.0.0.1/8980) >/dev/null 2>&1 && break
+      ready && break
       sleep 0.5
     done
-    if ! (exec 3<>/dev/tcp/127.0.0.1/8980) >/dev/null 2>&1; then
+    if ! ready; then
       echo "scheduler never came up. bazel run //tools:local_rbe -- logs" >&2
       exit 1
     fi

@@ -1,17 +1,7 @@
-"""DEEP rung — look inside the layer and prove the *prebuilt* wheel rode along.
+"""Task 2: open the layer tar and prove the prebuilt wheel is inside it.
 
-`build_test` can only tell you the image assembled; it cannot tell you what is
-in it. This test opens the layer tarball and asserts two things:
-
-  1. cryptography's compiled Rust extension (`_rust.abi3.so`) is in the layer —
-     so the wheel really was packed, not just declared.
-  2. no build-time leftovers (`.c`, `.rs`, `Cargo.toml`, `setup.py` for
-     cryptography) came along — i.e. Bazel *consumed* a prebuilt manylinux
-     wheel; no compiler ran and no sdist was unpacked.
-
-Reading a layer like this is the daemonless way to answer "what is actually in
-my image?" — the same question `container_structure_test` answers in Levels 2
-and 3, done by hand so you can see there is no magic.
+Checks that cryptography's compiled `_rust.abi3.so` is packed and that no
+source-build leftovers (`.rs`, `.c`, `Cargo.toml`) came along.
 """
 
 import sys
@@ -41,8 +31,7 @@ class WheelIsInTheLayerTest(unittest.TestCase):
         )
 
     def test_no_source_build_leftovers(self):
-        # If pip had fallen back to the sdist, the layer would carry Rust/C
-        # sources instead of (or next to) a ready-made .so.
+        # An sdist fallback would leave Rust/C sources in the layer.
         leftovers = [
             n
             for n in self.names

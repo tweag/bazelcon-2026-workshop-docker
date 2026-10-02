@@ -1,0 +1,24 @@
+name: labs runner
+description: >
+  Free disk space for the lab images and cache Bazel's downloads (~600 MB:
+  interpreter, wheels, apt archives) between runs, so a re-run takes minutes.
+runs:
+  using: composite
+  steps:
+    # A stock runner has ~14 GB free; every lab image is a ~600 MB tarball on
+    # top of its layers. Overflowing kills the runner without a log line.
+    - name: Make room on the runner
+      shell: bash
+      run: |
+        sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                    /usr/local/.ghcup /usr/share/swift
+        echo "build --disk_cache=" >> ~/.bazelrc
+        echo "common --repository_cache=$HOME/.cache/bazel-repo" >> ~/.bazelrc
+        df -h /
+
+    - name: Cache Bazel downloads
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/bazel-repo
+        key: labs-repo-${{ hashFiles('MODULE.bazel.lock', 'labs/**/*.lock.json', 'labs/requirements_lock.txt') }}
+        restore-keys: labs-repo-

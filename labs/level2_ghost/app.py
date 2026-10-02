@@ -1,10 +1,4 @@
-"""Level 2 payload — the "ghost" runtime dependency.
-
-`pip install pytesseract` gives you a pure-Python wrapper. It looks self-
-contained, but every real call shells out to the `tesseract` binary. pip never
-installed that binary — it's a ghost. We make it real (and hermetic) by adding
-a pinned apt layer to the image, not by running `apt-get` in a Dockerfile.
-"""
+"""Level 2 payload: pytesseract is pure Python, but shells out to `tesseract`."""
 
 import sys
 

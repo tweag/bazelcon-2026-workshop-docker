@@ -13,7 +13,7 @@ jobs:
 
       # A hosted runner has ~14 GB free and ships ~25 GB of toolchains this
       # workshop never touches. Building every sample and lab image — each a
-      # ~600 MB tarball on top of its layers — fills the disk, and when it goes
+      # ~80–700 MB tarball on top of its layers — fills the disk, and when it goes
       # the runner dies before it can write a single log line: the failure
       # arrives as a job with no output at all and a `No space left on device`
       # annotation. So reclaim the space, and stop the disk cache from keeping
@@ -72,7 +72,7 @@ jobs:
           test -n "$a"
           test "$a" = "$b"
 
-  # The local-infrastructure labs (labs/REMOTE.md). Neither of these paths had
+  # The local-infrastructure labs (labs/remote/README.md). Neither of these paths had
   # any test coverage before: the registry was a docs-only workflow, and the
   # remote-cache material pointed at a hosted service nobody could run in CI.
   # Both now run from pinned static binaries, so this job needs no services.
@@ -107,12 +107,12 @@ jobs:
           # Populate the cache for THIS target first. The tarball action runs
           # locally, so unless its own result is already a cache hit Bazel has
           # to stage every layer byte as an input and the measurement below is
-          # meaningless. REMOTE.md gets this for free: its §1 builds
+          # meaningless. labs/remote gets this for free: its §1 builds
           # //samples/... — which includes :image.tar — before §2 measures.
           bazel build --config=local-cache //samples/python:image.tar
           bazel clean
           bazel build --config=local-bwb //samples/python:image.tar
-          # 258 MB with a normal build; a few hundred KB without the bytes.
+          # ~82 MB with a normal build; a few hundred KB without the bytes.
           bytes=$(du -sb bazel-out/k8-fastbuild/bin/samples/python | cut -f1)
           echo "bazel-out/.../samples/python = $bytes bytes"
           test "$bytes" -lt 10000000
@@ -128,11 +128,118 @@ jobs:
           bazel run //samples/python:push 2>&1 | tee /tmp/push2.log
           grep -q "blob transfers" /tmp/push2.log
 
+      # labs/remote task 5: a registry is also a way to READ an image, with no
+      # daemon. The Python sample ships no `dot` (the ghost), so export has none.
+      - name: Read the pushed image back with crane
+        run: |
+          set -euo pipefail
+          bazel run //tools:crane_cli -- manifest localhost:5000/bwb/python-graphviz:latest \
+            | tee /dev/stderr | grep -q '"layers"'
+          n=$(bazel run //tools:crane_cli -- export localhost:5000/bwb/python-graphviz:latest - \
+                | tar tf - | grep -c bin/dot || true)
+          echo "bin/dot entries: $n"
+          test "$n" = 0
+
+      # Lazy push needs a remote CACHE, not remote execution: the push tool
+      # streams layer blobs straight out of the CAS. After a clean there are no
+      # local outputs, so every blob must come from the cache, none from disk.
+      - name: Lazy push streams blobs from the remote cache
+        run: |
+          set -euo pipefail
+          bazel clean
+          bazel run --config=local-bwb \
+            --@rules_img//img/settings:remote_cache=grpc://localhost:9092 \
+            //samples/python:push_lazy -- --registry localhost:5000 2>&1 \
+            | tee /tmp/lazy.log
+          grep -qE "blob transfers: 0 from disk, .*[1-9][0-9]* from remote cache" /tmp/lazy.log
+          curl -fsS http://localhost:5000/v2/bwb-graphviz/tags/list \
+            | tee /dev/stderr | grep -q 1h
+
       - name: Tear down
         if: always()
         run: |
           bazel run //tools:local_cache -- stop || true
           bazel run //tools:local_registry -- stop || true
+
+  # Every command on the slides is copy-pasted by a room of attendees, so run
+  # them: README.md's setup first (the deck assumes it), then each ```bash line
+  # of slides/slides.md in slide order, verbatim — no hand-copied duplicates to
+  # drift. `$ ` transcripts and ```console blocks get the static check only
+  # (every label and --config exists). Pushes go to ttl.sh, as on the slides.
+  slide-commands:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same reason as the `bazel` job above.
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
+
+      - name: Every slide command works
+        run: python3 labs/ci/labs_ci.py slides --run
+
+  # Remote EXECUTION on a local Buildfarm (labs/remote/README.md §4). Needs
+  # Docker, which hosted runners have. Two contracts:
+  #   1. the documented subset really executes remotely, and passes;
+  #   2. the documented hermeticity bug behaves as documented. Apt-layer
+  #      targets compile `gawk` with the C++ toolchain Bazel autodetected on
+  #      THIS host, but the worker runs its own gcc. Same gcc major on both
+  #      (e.g. an Ubuntu 24.04 runner vs the 24.04 worker): it passes, by
+  #      coincidence. Different: "absolute path inclusion". A hermetic
+  #      toolchain would make it pass everywhere; then update the lab.
+  rbe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
+
+      - name: Start Buildfarm
+        run: bazel run //tools:local_rbe
+
+      - name: The documented subset runs remotely and passes
+        run: |
+          set -euo pipefail
+          bazel test --config=local-rbe //samples/python/... //labs/playground/... \
+            2>&1 | tee /tmp/rbe.log
+          # Cache hits alone would also pass; require actions that ran on the worker.
+          grep -qE "processes: .*[1-9][0-9]* remote[,.]" /tmp/rbe.log
+
+      - name: The host-toolchain bug behaves as documented
+        run: |
+          set -uo pipefail
+          host=$(gcc -dumpversion | cut -d. -f1)
+          worker=$(docker exec bwb-rbe-worker gcc -dumpversion | cut -d. -f1)
+          echo "host gcc $host, worker gcc $worker"
+          bazel build --config=local-rbe //samples/distroless:image > /tmp/apt.log 2>&1
+          rc=$?
+          tail -20 /tmp/apt.log
+          if [ "$host" = "$worker" ]; then
+            test "$rc" = 0 || { echo "::error::same gcc on host and worker, yet the apt layer failed remotely"; exit 1; }
+          else
+            if [ "$rc" = 0 ]; then
+              echo "::error::gcc $host (host) vs $worker (worker) built fine — a hermetic toolchain? update labs/remote/README.md §4"
+              exit 1
+            fi
+            grep -q "absolute path inclusion" /tmp/apt.log
+          fi
+
+      - name: Buildfarm logs on failure
+        if: failure()
+        run: docker compose -f tools/rbe/docker-compose.yml logs --tail=200 || true
+
+      - name: Tear down
+        if: always()
+        run: bazel run //tools:local_rbe -- stop || true
 
   slides:
     runs-on: ubuntu-latest

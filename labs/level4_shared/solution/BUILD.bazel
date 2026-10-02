@@ -1,0 +1,75 @@
+# Level 4 — reference solution (green). The change from the skeleton: each
+# service's layer comes from layer_from_binary over its py_layered_binary, so
+# the interpreter and the wheel become layers of their own, shared by both images.
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_binary")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img_images.bzl", "image")
+load("@rules_python//python:defs.bzl", "py_test")
+
+package(default_visibility = ["//visibility:public"])
+
+layer_from_binary(
+    name = "api_layers",
+    binary = "//labs/level4_shared:api_layered",
+    path = "/app/api",
+)
+
+layer_from_binary(
+    name = "worker_layers",
+    binary = "//labs/level4_shared:worker_layered",
+    path = "/app/worker",
+)
+
+image_manifest(
+    name = "image_api",
+    base = image("python_base_img"),
+    entrypoint = ["/app/api"],
+    layers = [":api_layers"],
+)
+
+image_manifest(
+    name = "image_worker",
+    base = image("python_base_img"),
+    entrypoint = ["/app/worker"],
+    layers = [":worker_layers"],
+)
+
+filegroup(
+    name = "api_manifest",
+    srcs = [":image_api"],
+    output_group = "root_blob",
+)
+
+filegroup(
+    name = "worker_manifest",
+    srcs = [":image_worker"],
+    output_group = "root_blob",
+)
+
+py_test(
+    name = "shared_layers_test",
+    size = "small",
+    srcs = ["//labs/level4_shared:shared_test.py"],
+    args = [
+        "$(rootpath :api_manifest)",
+        "$(rootpath :worker_manifest)",
+    ],
+    data = [
+        ":api_manifest",
+        ":worker_manifest",
+    ],
+    main = "//labs/level4_shared:shared_test.py",
+)
+
+image_load(
+    name = "api_load",
+    image = ":image_api",
+    tag = "bwb/level4-api:latest",
+)
+
+image_load(
+    name = "worker_load",
+    image = ":image_worker",
+    tag = "bwb/level4-worker:latest",
+)

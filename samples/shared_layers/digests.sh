@@ -9,7 +9,9 @@ set -euo pipefail
 cd "${BUILD_WORKSPACE_DIRECTORY}"
 OB="${HOME}/.cache/bazel-shared-layers-ob"   # dedicated, warm, reuses --disk_cache
 
-bazel --output_base="$OB" build \
+# --symlink_prefix=/: leave the workspace's bazel-bin alone. Otherwise it points
+# into $OB afterwards, and the next `tar tf bazel-bin/...` finds nothing.
+bazel --output_base="$OB" build --symlink_prefix=/ \
   //samples/shared_layers:image_api //samples/shared_layers:image_worker >/dev/null 2>&1
 bb=$(bazel --output_base="$OB" info bazel-bin 2>/dev/null)
 

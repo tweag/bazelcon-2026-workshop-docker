@@ -1,54 +1,62 @@
 #!/usr/bin/env bash
-# Depth meter / guide for the "Flow descent" labs (TASK §10).
-# Prints the rung ladder and the exact command for each rung. Run a command;
-# green = you cleared that rung. Descend as deep as you like — every depth is a
-# win, nobody is gated. Run me with:  bazel run //labs:progress
+# Lists every self-guided lab and task with its exact command.
+#   bazel run //labs:progress
 set -euo pipefail
 
-cat <<'LADDER'
+cat <<'LABS'
 
-  ~~~  THE FLOW DESCENT  ~~~  build images that survive contact with reality
+  ~~~  SELF-GUIDED LABS  ~~~  build images that survive contact with reality
 
-  Copy a command, run it, read what it says. [RED] rungs start failing and you
-  make them pass. [green] rungs already pass — run them anyway and read the test
-  to see what they prove. Go as deep as you want; every depth is a win.
+  Each lab's README.md has the goal, the start command and the tasks.
+  [RED] tasks start failing: edit the lab's BUILD.bazel until they pass.
+  [green] tasks already pass: run them and read the test. * = optional stretch.
 
-  LEVEL 1 — The Build-Time Trap        (cryptography: Rust + OpenSSL wheel)
-    surface  [RED]    bazel test //labs/level1_buildtime:app_test
-    deep     [RED]    bazel test //labs/level1_buildtime:image_layer_test
+  LEVEL 0 — From Dockerfile to rules_img  labs/level0_graphviz/README.md
+    task 1-2 [RED]    bazel test //labs/level0_graphviz:image_structure_test
+    *                 bazel run //labs/level0_graphviz:image_load   (render the PNG)
+
+  LEVEL 1 — The Build-Time Trap        labs/level1_buildtime/README.md
+    task 1   [RED]    bazel test //labs/level1_buildtime:app_test
+    task 2   [RED]    bazel test //labs/level1_buildtime:image_layer_test
     ·        [green]  bazel test //labs/level1_buildtime:image_build_test
-    abyss             open labs/level1_buildtime/HINT.md   (sdist fallback)
+    *                 the sdist fallback (read the README)
 
-  LEVEL 2 — The "Ghost" Runtime Trap   (pytesseract -> system `tesseract`)
-    surface  [green]  bazel test //labs/level2_ghost:app_test
-    deep     [RED]    bazel test //labs/level2_ghost:image_structure_test
-    ·                   3 checks: the binary, its language data, TESSDATA_PREFIX
-    abyss             open labs/level2_ghost/HINT.md       (OCR for real)
+  LEVEL 2 — The "Ghost" Runtime Trap   labs/level2_ghost/README.md
+    task 0   [green]  bazel test //labs/level2_ghost:app_test
+    task 1-2 [RED]    bazel test //labs/level2_ghost:image_structure_test
+    *                 bazel run //labs/level2_ghost:image_load   (OCR for real)
 
-  LEVEL 3 — The Hardware Wall          (pyopencl + POCL on CPU)
-    surface  [green]  bazel test //labs/level3_hardware:app_test
-    deep     [RED]    bazel test //labs/level3_hardware:image_structure_test
-    abyss             open labs/level3_hardware/HINT.md    (run a kernel; GPUs)
+  LEVEL 3 — The Hardware Wall          labs/level3_hardware/README.md
+    task 0   [green]  bazel test //labs/level3_hardware:app_test
+    task 1   [RED]    bazel test //labs/level3_hardware:image_structure_test
+    *                 bazel run //labs/level3_hardware:image_load   (kernel on CPU)
 
-  PLAYGROUND — nothing to fix, everything to change
-    bazel test //labs/playground/...     then read labs/playground/README.md
+  LEVEL 4 (extra) — One interpreter, N images    labs/level4_shared/README.md
+    task 0   [green]  bazel test //labs/level4_shared:groups_test
+    task 1   [RED]    bazel test //labs/level4_shared:shared_layers_test
+    *                 bazel run //labs/level4_shared:api_load   (both services, shared layers)
 
-  LAB R — remote cache, registry & remote execution, all on localhost
-    bazel run //tools:local_cache      then read labs/REMOTE.md
+  PLAYGROUND — nothing to fix, everything to change    labs/playground/README.md
+    bazel test //labs/playground/...
+
+  REMOTE — cache, registry & remote execution on localhost    labs/remote/README.md
+    bazel run //tools:local_cache
 
   ---------------------------------------------------------------------------
 
-  A rung is red and the error is useless?  container_structure_test reports
-  through JUnit XML, so the console only says `level=fatal msg=FAIL`. Decode it:
+  Red with a useless error (`level=fatal msg=FAIL`)? Decode it:
 
       bazel run //labs:explain
-      bazel run //labs:explain -- level2      # just one level
+      bazel run //labs:explain -- level2      # just one lab
 
-  Still stuck? Every level has a HINT.md with progressive, foldable answers, and
-  a solution/ you can diff against:
+  Reference answers:
 
       diff labs/level2_ghost/BUILD.bazel labs/level2_ghost/solution/BUILD.bazel
 
+  Where am I? One PASSED/FAILED line per task:
+
+      bazel test -k //labs:tasks
+
   The whole reference set is green:  bazel test //labs/...
 
-LADDER
+LABS

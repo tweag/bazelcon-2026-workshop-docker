@@ -1,153 +1,248 @@
 name: labs
 
-# The labs have contracts that `bazel test //...` cannot check, because the
-# skeletons are `manual`-tagged (wildcard patterns skip them) and because a
-# green structure test says nothing about whether the image can actually run.
+# Two modes, picked automatically (override with "Run workflow"):
 #
-# Four of them, one job each, so a red X names the thing that broke:
-#   reference  — every solution/ target is green
-#   skeletons  — every [RED] rung really does start red
-#   images     — the images the abyss rungs tell attendees to `docker run`, run
-#   guide      — the guide targets work and the ladder matches reality
+#   answers     In a FORK. Checks the attendee's answers: every lab's tasks,
+#               the images, and why anything red is red — all in the run's
+#               Summary tab. Red only if a lab you changed is still red.
+#               This is how you do the labs with nothing installed: see
+#               labs/README.md "Check your answers on GitHub".
+#
+#   maintainer  Upstream. The labs' own contracts:
+#                 walkthrough — each README, replayed on its skeleton: starts
+#                               red, every answer turns its task green, every
+#                               command it shows works (labs/ci/labs_ci.py)
+#                 reference   — every solution/ target is green
+#                 images      — the solution images actually `docker run`
+#                 guide       — progress/explain work; README targets + links exist
+#               Advisory on pull requests (continue-on-error): it reports, it
+#               never blocks a merge. Keep these out of required checks.
+#
+# The remote lab's commands are covered by the `remote` and `rbe` jobs in ci.yml.
 
 on:
   push:
-    branches: [main]
     paths:
       - "labs/**"
       - "tools/**"
+      - "samples/**"
+      - "benchmark/**"
       - "MODULE.bazel"
       - ".bazelrc"
       - ".github/workflows/labs.yml"
+      - ".github/actions/labs-runner/**"
   pull_request:
     paths:
       - "labs/**"
       - "tools/**"
+      - "samples/**"
+      - "benchmark/**"
       - "MODULE.bazel"
       - ".bazelrc"
       - ".github/workflows/labs.yml"
+      - ".github/actions/labs-runner/**"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "auto = answers in a fork, maintainer upstream"
+        type: choice
+        options: [auto, answers, maintainer]
+        default: auto
+      all:
+        description: "answers mode: fail on ANY red lab, not just the ones you changed"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
 
 concurrency:
   group: labs-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  reference:
-    name: reference solutions are green
+  mode:
     runs-on: ubuntu-latest
+    outputs:
+      answers: ${{ steps.pick.outputs.answers }}
+      maintainer: ${{ steps.pick.outputs.maintainer }}
+    steps:
+      - id: pick
+        env:
+          MODE: ${{ inputs.mode || 'auto' }}
+          FORK: ${{ github.event.repository.fork }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          DEFAULT: refs/heads/${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$MODE" = auto ]; then
+            if [ "$FORK" = true ]; then MODE=answers; else MODE=maintainer; fi
+          fi
+          answers=false; maintainer=false
+          # In a fork, a push already shows its checks on the PR; don't run twice.
+          if [ "$MODE" = answers ] && [ "$EVENT" != pull_request ]; then answers=true; fi
+          # Upstream, branch pushes are covered by their pull request.
+          if [ "$MODE" = maintainer ] && { [ "$EVENT" != push ] || [ "$REF" = "$DEFAULT" ]; }; then
+            maintainer=true
+          fi
+          echo "answers=$answers" >> "$GITHUB_OUTPUT"
+          echo "maintainer=$maintainer" >> "$GITHUB_OUTPUT"
+          echo "labs: mode **$MODE** (answers=$answers, maintainer=$maintainer)" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------- answers --
+  answers:
+    name: check my lab answers
+    needs: mode
+    if: needs.mode.outputs.answers == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # to diff against the commit you forked from
+      - uses: ./.github/actions/labs-runner
 
-      # Same reason as the `bazel` job in ci.yml: the images do not fit on a
-      # stock runner next to a disk cache, and overflowing kills it silently.
-      - name: Make room on the runner
+      # "Changed" = everything since the fork point with the upstream repo, so
+      # a lab counts as attempted whether you committed to main or a branch.
+      - name: Which labs did you change?
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-                      /usr/local/.ghcup /usr/share/swift
-          echo "build --disk_cache=" >> ~/.bazelrc
-          df -h /
+          set -uo pipefail
+          base=""
+          parent=$(gh api "repos/$GITHUB_REPOSITORY" --jq '.parent.full_name // empty' 2>/dev/null)
+          if [ -n "$parent" ] && git fetch --quiet "https://github.com/$parent" HEAD; then
+            base=$(git merge-base HEAD FETCH_HEAD)
+          fi
+          if [ -z "$base" ] && [ -n "${BEFORE:-}" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
+            base=$BEFORE
+          fi
+          if [ -n "$base" ]; then
+            git diff --name-only "$base" HEAD > /tmp/changed.txt
+          else
+            : > /tmp/changed.txt
+          fi
+          echo "compared against ${base:-nothing}:"; cat /tmp/changed.txt
 
-      - run: bazel test //labs/... --test_output=errors
+      - name: Check the answers (details in the Summary tab)
+        env:
+          ALL: ${{ inputs.all }}
+        run: |
+          if [ "$ALL" = true ]; then set -- --all; fi
+          python3 labs/ci/labs_ci.py answers --changed /tmp/changed.txt "$@"
 
-  # A skeleton that accidentally passes is a lab with nothing to do in it. This
-  # is the one check that would have caught Level 1's `image_build_test`, which
-  # passed with `deps = []` because a build_test cannot see a missing Python dep.
-  skeletons:
-    name: "skeleton is red: ${{ matrix.rung }}"
+  # ------------------------------------------------------------- maintainer --
+  walkthrough:
+    name: README works
+    needs: mode
+    if: needs.mode.outputs.maintainer == 'true'
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        rung:
-          - //labs/level1_buildtime:app_test
-          - //labs/level1_buildtime:image_layer_test
-          - //labs/level2_ghost:image_structure_test
-          - //labs/level3_hardware:image_structure_test
+        lab: [level0, level1, level2, level3, level4, playground]
     steps:
       - uses: actions/checkout@v5
-      - name: ${{ matrix.rung }} must fail
-        run: |
-          if bazel test "${{ matrix.rung }}" --test_output=summary; then
-            echo "::error::${{ matrix.rung }} PASSED but is supposed to start red"
-            exit 1
-          fi
-          echo "red as designed"
+      - uses: ./.github/actions/labs-runner
+      - run: python3 labs/ci/labs_ci.py walkthrough ${{ matrix.lab }}
+
+  reference:
+    name: reference solutions are green
+    needs: mode
+    if: needs.mode.outputs.maintainer == 'true'
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/labs-runner
+      - run: bazel test //labs/... --test_output=errors
 
   # container_structure_test lstats paths in an unpacked tar; it never execs
   # anything. So it happily passed while Levels 2 and 3 produced images whose
   # /lib had been replaced by an apt layer and could not run a single binary.
   # Only `docker run` catches that.
   images:
-    name: the lab images actually run
+    name: the solution images actually run
+    needs: mode
+    if: needs.mode.outputs.maintainer == 'true'
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/labs-runner
 
-      # Same reason as the `bazel` job in ci.yml: the images do not fit on a
-      # stock runner next to a disk cache, and overflowing kills it silently.
-      - name: Make room on the runner
+      - name: Level 0 — dot renders once its plugins are registered
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-                      /usr/local/.ghcup /usr/share/swift
-          echo "build --disk_cache=" >> ~/.bazelrc
-          df -h /
+          set -euo pipefail
+          bazel run //labs/level0_graphviz/solution:image_load
+          docker run --rm --entrypoint sh bwb/level0-graphviz \
+            -c 'dot -c && /app/app --render /tmp/g.png' 2>&1 \
+            | tee /dev/stderr | grep -q "rendered /tmp/g.png"
 
-      - name: Level 2 — the ghost is real
+      - name: Level 2 — the ghost is real, and OCR runs with no network
         run: |
           set -euo pipefail
           bazel run //labs/level2_ghost/solution:image_load
           docker run --rm bwb/level2-ghost | tee /dev/stderr | grep -q "^tesseract 5"
-
-      - name: Level 2 abyss — OCR runs, from a pinned layer, with no network
-        run: |
-          set -euo pipefail
-          docker run --rm bwb/level2-ghost --ocr /app/sample.png \
+          docker run --rm --network=none bwb/level2-ghost --ocr /app/sample.png \
             | tee /dev/stderr | grep -q "HERMETIC OCR"
 
       - name: Level 3 — a kernel runs on the CPU via POCL
         run: |
           set -euo pipefail
           bazel run //labs/level3_hardware/solution:image_load
-          docker run --rm bwb/level3-hardware \
+          docker run --rm --network=none bwb/level3-hardware \
             | tee /dev/stderr | grep -q "vector_add on OpenCL OK"
 
-      - name: Playground — two layers, config layer landed
+      - name: Level 4 — both services run from the shared layers
         run: |
           set -euo pipefail
-          bazel run //labs/playground:image_load
-          docker run --rm bwb/playground | tee /dev/stderr | grep -q "hello from a layer"
+          bazel run //labs/level4_shared/solution:api_load
+          bazel run //labs/level4_shared/solution:worker_load
+          docker run --rm --network=none bwb/level4-api | tee /dev/stderr | grep -q "^api: signed ticket"
+          docker run --rm --network=none bwb/level4-worker | tee /dev/stderr | grep -q "^worker: ticket OK"
 
   guide:
     name: the guide works
+    needs: mode
+    if: needs.mode.outputs.maintainer == 'true'
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/labs-runner
 
       - name: //labs:progress and //labs:explain run
         run: |
           set -euo pipefail
-          bazel run //labs:progress | tee /tmp/ladder.txt | grep -q "THE FLOW DESCENT"
+          bazel run //labs:progress | tee /tmp/tasks.txt | grep -q "SELF-GUIDED LABS"
           # With nothing run yet, explain should say so rather than crash.
           bazel run //labs:explain | grep -qi "no failing lab tests\|No lab test results"
 
-      # The ladder is copy-pasted by attendees, so every target it names has to
-      # exist. Catches a rung that was renamed in BUILD.bazel but not in the
-      # ladder — which is exactly how a lab guide rots.
-      - name: every target the ladder prints actually exists
+      # The task list is copy-pasted by attendees, so every target it names has
+      # to exist. Catches a target renamed in BUILD.bazel but not in the list.
+      - name: every target the task list prints actually exists
         run: |
           set -euo pipefail
-          grep -oE '//labs[^ ]*:[a-zA-Z0-9_.-]+' /tmp/ladder.txt | sort -u > /tmp/targets.txt
-          echo "ladder names:"; cat /tmp/targets.txt
+          grep -oE '//labs[^ ]*:[a-zA-Z0-9_.-]+' /tmp/tasks.txt | sort -u > /tmp/targets.txt
           while read -r t; do
-            bazel query "$t" >/dev/null 2>&1 || { echo "::error::ladder names $t, which does not exist"; exit 1; }
+            bazel query "$t" >/dev/null 2>&1 || { echo "::error::task list names $t, which does not exist"; exit 1; }
           done < /tmp/targets.txt
 
-      - name: explain decodes a real structure-test failure
+      - name: every target and link in the lab READMEs exists
+        run: python3 labs/ci/labs_ci.py readme
+
+      # The answers mode is what attendees run in their forks; prove that it
+      # reports, and that a skeleton nobody touched does not fail the run.
+      - name: answers mode runs on the untouched skeletons
         run: |
           set -euo pipefail
-          # Level 2's skeleton is red; its reasons live in the JUnit XML, and the
-          # console only prints `level=fatal msg=FAIL`. That is what :explain is for.
-          bazel test //labs/level2_ghost:image_structure_test || true
-          bazel run //labs:explain -- level2 | tee /tmp/explain.txt
-          grep -q "TESSDATA_PREFIX" /tmp/explain.txt
+          : > /tmp/none.txt
+          python3 labs/ci/labs_ci.py answers --changed /tmp/none.txt | tee /tmp/answers.txt
+          grep -q "not started" /tmp/answers.txt

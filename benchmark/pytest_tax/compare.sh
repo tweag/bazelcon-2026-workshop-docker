@@ -5,6 +5,7 @@
 # Non-hermetic utility (bazel run): shells out to bazel + docker, times them.
 # A dedicated --output_base keeps the nested bazel warm without deadlocking on
 # the outer `bazel run` server lock; it still reuses the repo's --disk_cache.
+# --symlink_prefix=/ keeps it from repointing the workspace's bazel-bin into $OB.
 set -euo pipefail
 cd "${BUILD_WORKSPACE_DIRECTORY}/benchmark/pytest_tax"
 
@@ -26,12 +27,12 @@ echo "(real wall-clock on this machine; absolute numbers vary, the ratio is the 
 
 # Warm both caches.
 printf '0\n' > marker.txt
-bazel --output_base="$OB" test "$TARGET" >/dev/null 2>&1 || true
+bazel --output_base="$OB" test --symlink_prefix=/ "$TARGET" >/dev/null 2>&1 || true
 [ "$have_docker" = 1 ] && docker build -q -t "$TAG" . >/dev/null 2>&1 || true
 
 # Incremental: simulate a one-line code change, time each tool to re-validate.
 printf 'iter-1\n' > marker.txt
-bazel_warm=$(timeit bazel --output_base="$OB" test "$TARGET")
+bazel_warm=$(timeit bazel --output_base="$OB" test --symlink_prefix=/ "$TARGET")
 
 docker_warm=-1
 if [ "$have_docker" = 1 ]; then

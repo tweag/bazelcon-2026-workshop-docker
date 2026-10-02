@@ -1,4 +1,4 @@
-"""Why is my rung red?   bazel run //labs:explain
+"""Why is my test red?   bazel run //labs:explain
 
 `container_structure_test` reports through a JUnit XML file, so a failure shows
 in the Bazel console as a bare `level=fatal msg=FAIL` with no detail at all.
@@ -37,13 +37,22 @@ def failures(xml_path: Path):
     return out
 
 
+def log_tail(log: Path, lines: int = 12):
+    """The end of a test.log, where a Python traceback's real error is."""
+    try:
+        text = log.read_text(errors="replace").splitlines()
+    except OSError:
+        return ["(no test.log)"]
+    return [l for l in text if l.strip()][-lines:]
+
+
 def main(argv) -> int:
     workspace = Path(os.environ.get("BUILD_WORKSPACE_DIRECTORY", "."))
     testlogs = workspace / "bazel-testlogs"
     needle = argv[0] if argv else ""
 
     if not (testlogs / "labs").is_dir():
-        print("No lab test results yet. Run a rung first, e.g.:")
+        print("No lab test results yet. Run a lab test first, e.g.:")
         print("    bazel test //labs/level2_ghost:image_structure_test")
         return 0
 
@@ -61,8 +70,10 @@ def main(argv) -> int:
             # py_test failures land here as a bare "exited with error code 1";
             # the real traceback is in the plain-text log next to the XML.
             if msg.startswith("exited with error code"):
-                print("  ✗ test process failed — full output in:")
-                print("      %s" % (xml_path.parent / "test.log"))
+                log = xml_path.parent / "test.log"
+                print("  ✗ test process failed — last lines of %s:" % log)
+                for line in log_tail(log):
+                    print("      %s" % line)
                 continue
             print("  ✗ %s" % name)
             for line in msg.splitlines():
@@ -71,7 +82,7 @@ def main(argv) -> int:
     if not found:
         suffix = ' matching "%s"' % needle if needle else ""
         print("No failing lab tests recorded%s." % suffix)
-        print("(Only rungs you have actually run show up here.)")
+        print("(Only tests you have actually run show up here.)")
     return 0
 
 

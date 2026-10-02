@@ -1,5 +1,5 @@
 # A real remote-execution cluster on your laptop: Buildfarm + Redis.
-# Driven by `bazel run //tools:local_rbe`; see labs/REMOTE.md.
+# Driven by `bazel run //tools:local_rbe`; see labs/remote/README.md.
 #
 # Three containers is the floor for remote EXECUTION (as opposed to a remote
 # cache, which //tools:local_cache serves from a single static binary):

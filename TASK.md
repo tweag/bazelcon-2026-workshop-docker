@@ -158,6 +158,9 @@ Node under Bazel (`rules_js` / `aspect_rules_js` + `npm` deps).
    - ✅ **Artefact:** [`slides/BUILD.bazel`](slides/BUILD.bazel) (`//slides:build`,
      `//slides:export_pdf`) + [`slides/slidev.sh`](slides/slidev.sh) →
      [`docs/building-without-bytes.pdf`](docs/building-without-bytes.pdf)
+   - The `present`/`export_pdf` wrappers run on the Bazel-pinned Node
+     (`@rules_nodejs//nodejs:current_node_runtime` → `SLIDEV_NODE`), not the
+     host's `node`. A host Node 12 used to trip the slidev.sh preflight.
 4. [x] `bazel run //slides:present` → `slidev` dev server for live preview.
    - ✅ **Artefact:** `//slides:present` in [`slides/BUILD.bazel`](slides/BUILD.bazel)
 5. [x] Slide content references the *actual* sample targets above (Slidev
@@ -373,7 +376,7 @@ build-correctness tasks above.
    - ✅ **Partly done: the infrastructure no longer needs the network or a
      daemon.** The registry (`crane`) and the remote cache (`bazel-remote`) are
      pinned static binaries fetched by MODULE.bazel, so the push and caching labs
-     run on a plane. See [`labs/REMOTE.md`](labs/REMOTE.md). Still open: vendoring
+     run on a plane. See [`labs/remote/README.md`](labs/remote/README.md). Still open: vendoring
      the base image itself, and the timing re-check.
 6. [ ] **Reconsider the "Slide-as-Code" framing** — the self-build loop is
    currently demoted to a flourish (§7.4) but is the deck's most distinctive
@@ -456,60 +459,60 @@ classifying a failure as compiler vs. OS-dependency vs. hardware.
 **Open scope question:** Levels 1 + 3 as tighter "show & explain" beats with
 Level 2 as the full hands-on lab, to fit 90 min (see §7 timing).
 
-## 10. Labs as a "Flow" descent (test-driven, self-paced)
+## 10. Self-guided labs (test-driven)
 
-Design the labs after the game *Flow* (Csikszentmihalyi's flow theory): one
-continuous ladder of failing tests the audience descends **as deep as they
-want**. Every depth is rewarding on its own, nobody is gated, and `bazel test`
-is the depth meter — so a mixed entry-level/advanced room self-sorts without
-anyone waiting or stalling. Builds on the three-level spine (§9) and reuses the
-repo's existing test types (`container_structure_test` `driver = "tar"`,
-`build_test`, `py_test`).
+Self-guided labs: each lab is a set of failing tests the attendee turns green at
+their own pace, going as far as they want. Every task is a win on its own and
+nobody is gated, so a mixed entry-level/advanced room self-sorts without anyone
+waiting. Builds on the three-level spine (§9) and reuses the repo's existing
+test types (`container_structure_test` `driver = "tar"`, `build_test`,
+`py_test`).
 
-**Two motions:**
-- _Across_ = the three levels (§9), as **soft, instructor-called checkpoints**
-  ("everyone get Level 2's surface green").
-- _Down_ = optional depth **within** each level, where the room self-sorts.
+**Tasks per level** (each = a failing test to turn green; ★ = optional stretch):
 
-**The depth ladder** (each rung = a failing test to turn green):
-
-| Level | Surface (everyone) | Deeper (opt-in) | Abyss (advanced "boss") |
+| Level | Task 1 | Task 2 | ★ Stretch |
 |---|---|---|---|
-| 0 · On-ramp (graphviz) | green a `container_structure_test` on a working image — learn the red→green mechanic | — | — |
-| 1 · Build-time (cryptography) | pin the wheel; `py_test` import passes | multi-arch `build_test` (per-arch wheel selection) | force + diagnose the sdist fallback; prove non-hermetic |
-| 2 · Ghost (pytesseract) | structure test: `tesseract` binary present | tessdata + `TESSDATA_PREFIX` metadata test | OCR `py_test` runs; minimize the distroless layer |
-| 3 · Hardware (pyopencl) | POCL CPU ICD present (structure test) | run a trivial kernel on CPU | "punch a hole": `/dev/dri` / NVIDIA-toolkit run target + why drivers can't be baked in |
+| 0 · Dockerfile → rules_img (graphviz) | translate `FROM` + `ENTRYPOINT` (structure test) | `dot` as a pinned bookworm layer | render the PNG: apt layers skip postinst (`dot -c`) |
+| 1 · Build-time (cryptography) | pin the wheel; `py_test` import passes | the wheel is inside the layer (`image_layer_test`) | diagnose the sdist fallback; per-arch wheel selection |
+| 2 · Ghost (pytesseract) | structure test: `tesseract` binary + data present | `TESSDATA_PREFIX` metadata test | OCR runs; reproduce the `mergedusr` silent failure |
+| 3 · Hardware (pyopencl) | POCL CPU ICD present (structure test) | — | run a kernel on CPU; `/dev/dri` / NVIDIA-toolkit + why drivers can't be baked in |
 
 **Mechanics (under `//labs/...`):**
-1. [x] Each rung is its own target, annotated by depth (`surface` / `deep` /
-   `abyss`). Learners run rungs **by name** (the `progress` meter lists them);
-   skeleton rungs are tagged `manual` so `bazel test //...` skips them and only
-   the green `solution/` targets gate CI.
-   - ↳ _Note: `--test_tag_filters` does NOT dial the learner's skeleton rungs —
-     `manual` excludes them from wildcard expansion. Named targets are the dial._
-2. [x] **Depth meter / guide**: `bazel run //labs:progress` prints the ladder +
-   the exact command for every rung.
+1. [x] Each task is its own target. Learners run tasks **by name** (`progress`
+   lists them); skeleton tests are tagged `manual` so `bazel test //...` skips
+   them and only the green `solution/` targets gate CI.
+2. [x] **Guide**: `bazel run //labs:progress` lists every lab and task with its
+   exact command.
    - ✅ **Artefact:** [`labs/progress.sh`](labs/progress.sh) → `//labs:progress`.
 3. [x] **Skeletons, not blanks**: each level's `BUILD.bazel` has the boilerplate
-   done and a `# TODO` at the one decision that teaches the lesson (red → green).
+   done and a `# TODO(task N)` at the one decision that teaches the lesson.
 4. [x] **`//labs/levelN/.../solution`** reference targets — green and CI-gated.
-5. [x] **Progressive hints**: a `HINT.md` per level (collapsible answers).
+5. [x] **One README per lab folder**: goal, start command, tasks, and collapsed
+   answers — self-contained, readable on GitHub without opening other files.
+   (Replaced the per-level `HINT.md`s; `REMOTE.md` moved to `labs/remote/`.)
 6. [~] **Pre-generated apt locks** checked in (no network mid-lab);
    ✅ [`tesseract.lock.json`](labs/level2_ghost/tesseract.lock.json),
    [`pocl.lock.json`](labs/level3_hardware/pocl.lock.json),
    [`labs/requirements_lock.txt`](labs/requirements_lock.txt). _Venue base
    pre-pull/vendoring still open (ties to §8.5)._
+7. [x] **Deck concept → exercise map** in [`labs/README.md`](labs/README.md):
+   every concept on the slides points at a lab task. Gaps filled with playground
+   tasks (manifest/config, one base N images, distroless, Docker tax), a Level 2
+   `mergedusr` stretch, and a `crane` read-back task in the remote lab.
+   - ✅ Level 0 ([`labs/level0_graphviz/`](labs/level0_graphviz/)) added for the
+     deck's graphviz sample: reuses `//samples/python:app_layer`, with its own
+     bookworm `graphviz_lab_apt` (the sample's lock pins bullseye, for scratch).
+     _Open: generate graphviz's plugin config at build time so no `dot -c`._
+   - ↳ _Open: Level 1's arm64 wheel-selection stretch has no command — the repo
+     defines no `linux_arm64` `platform()` target to pass to `--platforms`._
 
 **Built & validated (2026-06-18):** all three levels under
 [`labs/`](labs/) — `level1_buildtime` (cryptography), `level2_ghost`
 (pytesseract + `tesseract_apt`), `level3_hardware` (pyopencl + `pocl_apt`), each
-with a skeleton + `solution/` + `HINT.md`, plus [`labs/README.md`](labs/README.md)
-and a dedicated `labs_pypi` pip hub. Verified: each skeleton rung is RED and each
-solution rung GREEN; `bazel test //...` passes (15 tests) and `bazel build //...`
-is clean. Remaining follow-ups: the **abyss** rungs are documented in the HINTs
-but not yet automated (OCR-runs-hermetically for L2; CPU-kernel run + GPU
-hole-punch for L3); L1's multi-arch/sdist-fallback rung is the host `build_test`
-plus a documented arm64 exercise.
+with a skeleton + `solution/` + `README.md`, plus [`labs/README.md`](labs/README.md)
+and a dedicated `labs_pypi` pip hub. Verified: each skeleton task is RED and each
+solution GREEN; `bazel test //...` passes (15 tests) and `bazel build //...`
+is clean.
 
 ## 11. rules_img-only migration (supersedes the dual-ruleset framing)
 
@@ -1305,7 +1308,7 @@ symlinks *inside* the image (merged-`/usr`, note 2) and symlinks *around* the ou
 - `crane export … | tar tf -` flattens the image to **8692 paths** with no `bin/dot`
   — the deck's payload story, proven without starting a container.
 - Under `--remote_download_minimal` the bytes were never fetched at all
-  (`labs/REMOTE.md`: 258 MB → 177 KB). A layout is dangling links until you ask.
+  (`labs/remote/README.md`: 258 MB → 177 KB). A layout is dangling links until you ask.
 
 ### Blocked on the pinned ruleset — rules_img 0.3.12
 
@@ -1426,3 +1429,140 @@ now reports 9 advisories, all of them in the three packages above — none in th
 bumped here. The deck uses **no mermaid diagrams** (graphs
 are graphviz under `slides/graphs/`), so the only minor-version bump carries no visual
 risk.
+
+## 17. Review pass — Johan's deck feedback (2026-09-30)
+
+Slide numbers are as Johan saw them (the export's numbering).
+
+- **Slide 17: `images.pull(...)` dimmed to unreadable.** Slidev's `{N}` line highlight
+  sets every other line to `opacity: 0.3`. New `.code-pin` wrapper (`slides/style.css`):
+  every line stays at full strength, the highlighted line gets a lime band, and an
+  optional `--pin` string adds a callout ("◀ the pin: bytes, not a tag"). Slide 8
+  (Dockerfile `{4-6}`) had the same dimming and uses `.code-pin` too (band only).
+- **Slide 29: clipped on the right, white strip at the bottom.** There were two causes:
+  - One long code line gave the `two-cols-header` grid a min-content width wider
+    than the canvas. Fixed globally with `min-width: 0` on `.col-left`/`.col-right`.
+  - The `mergedusr` block's `maxHeight` made Slidev scroll the highlighted line into
+    view. That scroll moved the whole slide up 15px, which exposed the white strip.
+    The block now fits without `maxHeight`: `code-sm`, a 3fr/2fr split, and the note
+    moved into `::bottom::` on one line.
+  - Slide 28 was also overflowing (its right column ran off the edge). It is now
+    2fr/1fr plus `code-sm`.
+  - A DOM sweep of all slides shows no layout overflow.
+- **Slides 36/37: tiny text in the plates.**
+  - 37 (`remote-cache-rbe.png`): its four labels carry the meaning, so they were
+    cleared from the PNG (alpha → 0; the brace over the line cooks is kept) and
+    re-set as live HTML text over the image (`.plate-labels`, positioned in percent).
+    Image `max-h-60` → `max-h-64`.
+  - 36 (`without-bytes.png`): image `max-h-48` → `max-h-56`, with the "Lazy pulls"
+    bullet cut to one line to make room. Johan was fine with the digests staying
+    unreadable.
+- **Audit of the other plates. Still small, not changed yet:**
+  - slide 10 `sandwich-layers` (app code / deps / runtime / base OS) is the one most
+    worth fixing: the labels *are* the lesson.
+  - slide 11 `croque-shared-layers` (bread / gruyère / ham / béchamel, "shared", "this
+    differs") is readable-ish at about 9px.
+  - slides 26 `catering-vs-onepot`, 31 `docker-lifecycle` and 35 `one-base-n-images`
+    have labels that the slide text or caption already repeats.
+  - These plates are mostly opaque, so moving the labels to HTML means painting over
+    the baked text, not just clearing alpha. Otherwise, regenerate them without text
+    (`PROMPTS.md`).
+- `remote-cache-rbe.png` is still a 6.8 MB PNG and goes through the §13 WebP batch.
+
+## 18. Naive-student proof-read + slimmer layers (2026-10-02)
+
+Every lab README was walked as a beginner, starting from an empty `HOME` and a fresh
+clone. The setup was red and left about 14 GB on disk (it filled a 39 GB disk partway
+through), and the structure tests took 23–141 s. Root cause: each Python app layer was
+**~560 MB**, of which 559 MB was the interpreter. The python-build-standalone archive is
+unstripped (libpython 218 MB, python3.12 102 MB), and `pkg_tar(include_runfiles)` copies
+the binary again for each of the `python` and `python3` symlinks.
+
+### Done (branch `slim-layers`)
+
+- `MODULE.bazel`: a `python.single_version_platform_override` that pulls the
+  `install_only_stripped` build of the same 3.12.13 / 20260414 release.
+- `optimize = True` on every app layer's `layer_from_tar`, plus
+  `build --@rules_img//img/settings:compress=zstd` in `.bazelrc`. The duplicate binaries
+  become tar hardlinks, and the layer was stored uncompressed before (`.tar` maps to
+  "none") and is now zstd.
+- `.bazelrc`: `test --build_tests_only`, so ~6 GB of `image_load` tars that no test reads
+  are no longer built, and `--experimental_disk_cache_gc_max_size=5G`.
+- `samples/python:image_structure_test`: `size` small → medium. It hit the 60 s timeout
+  during a cold, loaded setup.
+
+| | Before | After |
+|---|---|---|
+| cold `bazel test //samples/... //labs/... //tools/...` | 256 s, 1 TIMEOUT | 34 s, 17/17 |
+| bazel-out + disk cache (apparent) | ~12 + ~11 GB | 3.5 + 3.4 GB |
+| Python app layer blob | 560 MB (`tar`) | 36–53 MB (`tar+zstd`) |
+| `docker images` level0 / 2 / 3 / playground | ~1.1 GB each | 175 / 219 / 688 / 81 MB |
+| structure tests (cold, in parallel) | 70–141 s | 10–14 s (5 s alone) |
+
+How it was verified:
+- The ci.yml reproducible-digest check passes, with no disk cache.
+- The structure tests, `docker load` + `run` of every solution, the push (7 blobs, then
+  2), and `crane manifest` / `export` all read zstd.
+- The docs now carry the new numbers: remote §1 380 / 260, §2 82 MB / 742 KB (110×),
+  image.oci 12K / 78M, image.oci.tar 78 MB, "~8 GB free disk". The crane export count
+  (8692 paths) is unchanged.
+
+### Next: an extra lab, "one interpreter, N images" (closes the §9 / volatility-gap item)
+
+Make this an **optional extra lab** (e.g. `labs/level4_shared/`), not a rewrite of the
+deck. The main path keeps teaching "`pkg_tar(include_runfiles)` → one layer". The extra
+lab then shows the price of that, which is the same interpreter shipped nine times, and
+the fix.
+
+- [x] **Built as `labs/level4_shared/`.** `defs.bzl` holds `py_layered_binary`, which splits
+  a py_binary's runfiles into interpreter / third_party / app groups via `RunfilesGroupInfo`.
+  `layer_from_binary` turns those into shared layers: api and worker share base + 35.7 MB
+  interpreter + 5.2 MB wheel and differ by a few KB of app. `groups_test` checks that
+  nothing is lost; it caught the generated empty `__init__.py` files, hence
+  `legacy_create_init = 0`. Wired into `:tasks`, progress, labs_ci (LABS/STRETCH/walk)
+  and labs.yml.
+- [x] Spike first: split the interpreter, deps and app into separate layers with rules_img
+  `layer_from_binary` (`runfiles_sharing_mode = "shared"`). Lab shape:
+  - two py_binaries
+  - `samples/shared_layers/digests.sh`-style proof that their interpreter layer digests match
+  - a structure test
+  - It needs a small wrapper rule that gives the `py_binary` a `RunfilesGroupInfo`.
+    rules_runfiles_group is already in the graph via rules_img; rules_python 2.0.2
+    doesn't provide one.
+  - Gain: one ~36 MB interpreter blob shared by every image, instead of 9 copies.
+    Structure-test time doesn't change.
+  - Touch points, only if the main deck later adopts the split:
+    - slides.md :457–597 ("one tar → one layer") and the hand-typed `image_manifest` at :510–519
+    - content.md :285–311
+    - the level0–3 READMEs
+    - `layer_test.py`, which would pass vacuously once wheels leave `app_layer.tar`
+    - the `labs_ci.py` literal edits (:303–309, :363–367, :414) and its base-layer lines `{2,3,4,5}`
+- [x] The apt layers students write (`layer_from_tar(src = "@x//:flat")`) stay
+  uncompressed in the answers. Each lab now has an optional ★ "shrink the layer" stretch
+  that adds `optimize = True`, measured as graphviz 94 → 38 MB, tesseract 130 → 58 MB and
+  POCL 589 → 180 MB, with the structure tests green and `docker run` OK.
+
+### Open proof-read findings (Levels 0–1; Levels 2–3, playground and remote still being walked)
+
+- [x] `labs/level0_graphviz/README.md:39`: the ★ row has `docker run` with no
+  `image_load`, so a student runs a stale image or gets "pull access denied".
+- [ ] `labs/README.md`:
+  - [ ] It says "Three helper commands", but the table has four.
+  - [ ] `bazel test -k //labs:tasks` gives one line per *test*, not per task, and
+    re-runs every red structure test each time.
+  - [ ] "under a second (Level 1)": the first `image_layer_test` builds the app layer.
+- [ ] `labs/level1_buildtime/README.md`:
+  - [ ] :33 says `ModuleNotFoundError: cryptography`; the real text is
+    `No module named 'cryptography'`.
+  - [ ] :61: `grep _rust` matches 33 `.pyi` lines. Use `grep _rust.abi3.so`.
+  - [ ] The ★ sdist stretch has no command and no file to edit.
+- [ ] `labs/explain.py`:
+  - [ ] It shows stale results until a test is re-run. Print the log's age.
+  - [ ] Its py_test tail is mostly sandbox paths; the error is on the last line.
+- [ ] The `diff … solution/BUILD.bazel` stuck aid is about half noise (headers,
+  `exports_files`, `tags = ["manual"]`). Make the skeleton and the solution
+  identical outside the TODOs.
+- [ ] `labs_ci.py`:
+  - [ ] `image_load >/dev/null` hides a rootless/rootful Docker mismatch
+    (load into one daemon, `docker run` against the other).
+  - [ ] `answers` modes: `--all` and `--changed FILE` are undocumented.

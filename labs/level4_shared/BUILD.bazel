@@ -1,0 +1,150 @@
+# Level 4 (extra) — One interpreter, N images. Fill the TODO.
+# Goal, commands and tasks: README.md. Answer: ./solution.
+load("@labs_pypi//:requirements.bzl", "requirement")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img_images.bzl", "image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("@rules_runfiles_group//runfiles_group:runfiles_group_analysis_test.bzl", "runfiles_group_analysis_test")
+load(":defs.bzl", "py_layered_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "api.py",
+    "shared_test.py",
+    "worker.py",
+])
+
+# Two services that ship together: the api signs job tickets, the worker checks
+# them. Same interpreter, same cryptography wheel, different .py file.
+py_binary(
+    name = "api",
+    srcs = ["api.py"],
+    legacy_create_init = 0,  # see defs.bzl
+    main = "api.py",
+    deps = [requirement("cryptography")],
+)
+
+py_binary(
+    name = "worker",
+    srcs = ["worker.py"],
+    legacy_create_init = 0,
+    main = "worker.py",
+    deps = [requirement("cryptography")],
+)
+
+# The same binaries, with their runfiles sorted into interpreter / third_party /
+# app groups. Read defs.bzl: it's the whole trick.
+py_layered_binary(
+    name = "api_layered",
+    binary = ":api",
+)
+
+py_layered_binary(
+    name = "worker_layered",
+    binary = ":worker",
+)
+
+# Task 0 — green: the three groups add up to exactly the binary's runfiles.
+runfiles_group_analysis_test(
+    name = "groups_test",
+    binaries = [
+        ":api_layered",
+        ":worker_layered",
+    ],
+    tags = ["manual"],
+)
+
+# The deck's recipe, once per service: one tar each, so nothing is shared.
+# TODO(task 1): replace these four rules with one layer_from_binary per service
+# (binary = ":api_layered", path = "/app/api"), and point `layers` at them.
+pkg_tar(
+    name = "api_layer",
+    srcs = [":api"],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+layer_from_tar(
+    name = "api_layer_img",
+    src = ":api_layer",
+    optimize = True,
+)
+
+pkg_tar(
+    name = "worker_layer",
+    srcs = [":worker"],
+    include_runfiles = True,
+    package_dir = "/app",
+)
+
+layer_from_tar(
+    name = "worker_layer_img",
+    src = ":worker_layer",
+    optimize = True,
+)
+
+image_manifest(
+    name = "image_api",
+    base = image("python_base_img"),
+    entrypoint = ["/app/api"],
+    layers = [":api_layer_img"],
+    tags = ["manual"],
+)
+
+image_manifest(
+    name = "image_worker",
+    base = image("python_base_img"),
+    entrypoint = ["/app/worker"],
+    layers = [":worker_layer_img"],
+    tags = ["manual"],
+)
+
+# Task 1 — reads both manifests: the worker may add only its app code.
+filegroup(
+    name = "api_manifest",
+    srcs = [":image_api"],
+    output_group = "root_blob",
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "worker_manifest",
+    srcs = [":image_worker"],
+    output_group = "root_blob",
+    tags = ["manual"],
+)
+
+py_test(
+    name = "shared_layers_test",
+    size = "small",
+    srcs = ["shared_test.py"],
+    args = [
+        "$(rootpath :api_manifest)",
+        "$(rootpath :worker_manifest)",
+    ],
+    data = [
+        ":api_manifest",
+        ":worker_manifest",
+    ],
+    main = "shared_test.py",
+    tags = ["manual"],
+)
+
+# ★ bazel run //labs/level4_shared:api_load && docker run --rm bwb/level4-api
+image_load(
+    name = "api_load",
+    image = ":image_api",
+    tag = "bwb/level4-api:latest",
+    tags = ["manual"],
+)
+
+image_load(
+    name = "worker_load",
+    image = ":image_worker",
+    tag = "bwb/level4-worker:latest",
+    tags = ["manual"],
+)

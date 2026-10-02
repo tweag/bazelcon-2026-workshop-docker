@@ -12,6 +12,7 @@ module(
 
 # --- Core rulesets (latest BCR releases as of scaffolding) ---
 bazel_dep(name = "rules_img", version = "0.3.12")
+bazel_dep(name = "rules_runfiles_group", version = "0.0.1-rc.5")  # labs/level4_shared: split a py_binary into layers
 bazel_dep(name = "rules_python", version = "2.0.2")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
@@ -28,7 +29,7 @@ bazel_dep(name = "rules_nodejs", version = "6.7.3")
 # --- Prebuilt service binaries for the local-infrastructure labs -------------
 # The workshop's registry / remote-cache labs used to need Docker (registry:2)
 # or a hosted account (BuildBuddy). These two pinned static binaries make both
-# runnable offline, as ordinary Bazel targets — see labs/REMOTE.md.
+# runnable offline, as ordinary Bazel targets — see labs/remote/README.md.
 #
 # Upgrading: bump the version, then take the new sha256 from the release's
 # published checksums.txt (go-containerregistry) or by hashing the asset
@@ -81,6 +82,23 @@ python.toolchain(
     python_version = "3.12",
     is_default = True,
 )
+
+# The default python-build-standalone archive is unstripped: debug info makes
+# libpython 218 MB and python3.12 102 MB, and pkg_tar(include_runfiles) copies
+# that binary once per symlink (python, python3). Every app layer was ~560 MB.
+# Same release rules_python pins for 3.12.13, `install_only_stripped` flavour.
+[
+    python.single_version_platform_override(
+        platform = platform,
+        python_version = "3.12.13",
+        sha256 = sha,
+        urls = ["https://github.com/astral-sh/python-build-standalone/releases/download/20260414/cpython-3.12.13+20260414-%s-install_only_stripped.tar.gz" % platform],
+    )
+    for platform, sha in [
+        ("x86_64-unknown-linux-gnu", "3c3427e5628648478da2aa227472c350475a68bc58109f1b43849636a4aecb89"),
+        ("aarch64-unknown-linux-gnu", "953dcf67ff395d5baff77ef60bc852aaadad4c169e9b8d65dbc40ab9461a13e3"),
+    ]
+]
 use_repo(python)
 
 # The deck transcludes the region below: slides/slides.md `<<< ../MODULE.bazel#pip_hub`.
@@ -94,7 +112,7 @@ pip.parse(
 #endregion
 use_repo(pip, "pypi")
 
-# Lab payloads for the "Flow descent" labs (TASK §10), kept in their own hub so
+# Lab payloads for the self-guided labs (TASK §10), kept in their own hub so
 # they don't bloat the samples' deps. Re-lock: bazel run //labs:requirements.update
 pip.parse(
     hub_name = "labs_pypi",
@@ -192,6 +210,17 @@ apt.install(
 )
 #endregion
 use_repo(apt, "tesseract_apt")
+
+# Level 0 lab — the deck's `dot` on the python base. Its own bookworm manifest
+# (the sample's pins bullseye, for scratch) + mergedusr, like the layers below.
+# Regenerate: bazel run @graphviz_lab_apt//:lock
+apt.install(
+    name = "graphviz_lab_apt",
+    lock = "//labs/level0_graphviz:graphviz.lock.json",
+    manifest = "//labs/level0_graphviz:graphviz.yaml",
+    mergedusr = True,  # see the tesseract_apt note above
+)
+use_repo(apt, "graphviz_lab_apt")
 
 # Level 3 lab — a CPU-only OpenCL stack (POCL) as a hermetic layer.
 # Regenerate: bazel run @pocl_apt//:lock

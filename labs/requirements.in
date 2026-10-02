@@ -1,4 +1,4 @@
-# Python payloads for the "Flow descent" labs (TASK §10).
+# Python payloads for the self-guided labs (TASK §10).
 # Each maps to a level of the hermetic-complexity narrative (§9):
 cryptography   # Level 1 — Rust + OpenSSL extension; the build-time trap
 pytesseract    # Level 2 — pure-Python wrapper that shells out to `tesseract`

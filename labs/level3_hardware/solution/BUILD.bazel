@@ -1,6 +1,6 @@
 # Level 3 — reference solution (green). The fill: bundle the CPU OpenCL stack
 # (POCL) as a hermetic layer so the image carries a device. The real GPU stays a
-# runtime contract (see HINT.md) — drivers must match the host kernel.
+# runtime contract (see ../README.md) — drivers must match the host kernel.
 load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@labs_pypi//:requirements.bzl", "requirement")
 load("@rules_img//img:image.bzl", "image_manifest")
@@ -31,7 +31,6 @@ py_test(
     srcs = ["//labs/level3_hardware:app_test.py"],
     imports = [".."],  # srcs from the parent package land in ../, not here
     main = "app_test.py",
-    tags = ["surface"],
     deps = [":app"],
 )
 
@@ -42,7 +41,7 @@ pkg_tar(
     package_dir = "/app",
 )
 
-layer_from_tar(name = "app_layer_img", src = ":app_layer")
+layer_from_tar(name = "app_layer_img", src = ":app_layer", optimize = True)
 
 # The fill: wrap the CPU OpenCL stack (libOpenCL loader + POCL ICD) as a layer.
 layer_from_tar(name = "pocl_layer_img", src = "@pocl_apt//:flat")
@@ -53,7 +52,7 @@ image_manifest(
     entrypoint = ["/app/app"],
     layers = [
         ":app_layer_img",
-        ":pocl_layer_img",  # deep: the CPU OpenCL device, hermetic + pinned
+        ":pocl_layer_img",  # task 1: the CPU OpenCL device, hermetic + pinned
     ],
 )
 
@@ -71,9 +70,8 @@ filegroup(
 
 container_structure_test(
     name = "image_structure_test",
-    size = "small",
+    size = "medium",
     configs = ["//labs/level3_hardware:image_test.yaml"],
     driver = "tar",
     image = ":image.tar",
-    tags = ["deep"],
 )

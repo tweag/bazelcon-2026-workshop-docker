@@ -8,7 +8,7 @@
 # This is what makes the Module 4 material runnable without an account: a shared
 # cache, `--remote_download_minimal` ("without the bytes"), and rules_img's lazy
 # push strategy all speak the same REAPI gRPC that bazel-remote serves.
-# See labs/REMOTE.md.
+# See labs/remote/README.md.
 # --- begin runfiles.bash initialization v3 (Bazel's canonical snippet) -------
 set -uo pipefail
 set +e

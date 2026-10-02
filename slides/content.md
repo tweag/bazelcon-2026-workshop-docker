@@ -442,7 +442,7 @@ makes the dedup automatic; nobody has to declare it." (On screen:
 "how would you inspect the contents if the generated image is broken?". Placed
 here, at the end of Module 2, because "layering a real directory over a symlink
 replaces it" is a **layer-composition** fact — it is only legible once the
-catering and distroless slides have landed, and Lab 2's rungs 2 and 3 hit it
+catering and distroless slides have landed, and Lab 2's tasks hit it
 within minutes.)*
 "This is the module's one war story, and it is the sharpest gotcha in the repo
 because it fails **silently**. Debian's `.deb`s still ship files under `/lib`;
@@ -627,7 +627,7 @@ lacks *(Modules 3–4)* · **build without bytes** — the tars stay in CAS, onl
 digests travel *(Module 4)* · **Slide-as-Code**.
 **Mental model:** layers are granular, deterministic, cacheable build outputs —
 not opaque blobs handed to you by a daemon.
-**Point at the labs:** `bazel run //labs:progress` — the self-paced ladder through
+**Point at the labs:** `bazel run //labs:progress` — the self-guided labs through
 the three walls (build-time · the ghost · hardware) is the take-home. The deck
 never used to mention it, so say it out loud here.
 
@@ -704,9 +704,9 @@ isn't one."
 output groups, surfaced as `//samples/python:image.oci` and `:image.oci.tar`.
 Here is the trap, and it is the reviewer's actual question: `image.oci` is
 spec-compliant and every blob in it is a **symlink into the execroot**. `du -sh`
-reports **60K**; `du -shL` reports **325M**. Anything that copies or ships the
+reports **12K**; `du -shL` reports **78M**. Anything that copies or ships the
 folder without dereferencing hands over a tree of dangling links. So: `cp -rL`,
-or just take `image.oci.tar` — 608 MB of real bytes, zero symlinks, zeroed
+or just take `image.oci.tar` — 78 MB of real bytes, zero symlinks, zeroed
 timestamps. Both were verified in this repo, and every blob's content hashes to
 its own filename, so the layout is genuinely valid.*
 ***Path B — skip the folder:*** *`bazel run //tools:local_registry -- --hermetic`,
@@ -720,7 +720,7 @@ so neither path needs anything installed. `dive`, `skopeo` and `umoci` are
 deliberately **not** vendored — a workshop about hermeticity shouldn't send
 people to unpinned host tools. And the last caveat is the honest one: under
 `--remote_download_minimal` the bytes were never fetched at all —
-`labs/REMOTE.md` measured `image.tar` at 258 MB locally and 177 KB remote-only.
+`labs/remote/README.md` measured `image.tar` at 82 MB locally and 742 KB remote-only.
 A layout is a set of dangling links until you ask for the bytes.)*
 
 **Why there's no `RUN` to run [Q4].** *(Moved here out of Module 2 in the review
@@ -794,5 +794,5 @@ bazel build //samples/python:image --output_groups=digest  # the image digest, a
 bazel run //tools:render_graph -- //...   # draw the dependency graph
 bazel run //slides:present                # live preview
 bazel run //slides:export_pdf             # -> docs/building-without-bytes.pdf
-bazel run //labs:progress                 # the self-paced lab ladder (take-home)
+bazel run //labs:progress                 # the self-guided labs (take-home)
 ```

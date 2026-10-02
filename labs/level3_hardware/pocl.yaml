@@ -1,11 +1,5 @@
-# Debian packages for a CPU-only OpenCL stack (Level 3 — the hardware wall).
-# POCL is a software OpenCL implementation: it lets pyopencl enumerate a device
-# and run kernels on the CPU, with NO host GPU driver. That makes the lesson
-# demoable anywhere (e.g. a conference laptop) while we discuss the real wall:
-# a GPU ICD/driver must match the host kernel and so can't be baked in.
-#
-# Regenerate the lockfile after any change:
-#   bazel run @pocl_apt//:lock
+# Debian packages for a CPU-only OpenCL stack (Level 3): no host GPU driver needed.
+# Re-lock after any change: bazel run @pocl_apt//:lock
 version: 1
 
 sources:

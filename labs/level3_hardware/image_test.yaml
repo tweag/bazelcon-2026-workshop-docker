@@ -1,6 +1,4 @@
-# Daemonless validation (tar driver) for the Level 3 image.
-# DEEP: the OpenCL plumbing must be in the image. (Paths are amd64; the arm64
-# layer lands under aarch64-linux-gnu — see README.)
+# Level 3 checks (tar driver, daemonless). Paths are amd64 (arm64: aarch64-linux-gnu).
 schemaVersion: "2.0.0"
 
 fileExistenceTests:

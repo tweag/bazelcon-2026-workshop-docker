@@ -1,17 +1,5 @@
-# Level 2 — The "Ghost" Runtime Trap (pytesseract).   [SKELETON — fill the TODOs]
-#
-# The descent (run each; green = rung cleared):
-#   surface : bazel test //labs/level2_ghost:app_test               (green already —
-#             read it: it proves in pure Python that the engine is missing)
-#   deep    : bazel test //labs/level2_ghost:image_structure_test   (RED now — 3
-#             checks: the binary, its language data, and TESSDATA_PREFIX)
-#   abyss   : see HINT.md  (make OCR actually run, hermetically)
-#
-# The structure test only prints `level=fatal msg=FAIL` when it fails.
-# Decode it with:  bazel run //labs:explain -- level2
-#
-# The Python wrapper is already wired; the lesson is the apt LAYER, not the pip
-# dep. Stuck? read HINT.md, or peek at //labs/level2_ghost/solution.
+# Level 2 — The "Ghost" Runtime Trap (pytesseract). Fill the TODOs.
+# Goal, commands and tasks: README.md. Answer: ./solution.
 load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@labs_pypi//:requirements.bzl", "requirement")
 load("@rules_img//img:image.bzl", "image_manifest")
@@ -43,20 +31,17 @@ py_binary(
     ],
 )
 
-# Pure-Python proof that the engine is a ghost (green: no binary in the sandbox).
+# Task 0 (green) — proves in pure Python that the engine binary is missing.
 py_test(
     name = "app_test",
     size = "small",
     srcs = ["app_test.py"],
     imports = ["."],
-    tags = ["manual", "surface"],
+    tags = ["manual"],
     deps = [":app"],
 )
 
-# TODO(abyss): `sample.png` is sitting right here but never reaches the image.
-# Add it to `srcs` (it lands at /app/sample.png), then:
-#   bazel run //labs/level2_ghost:image_load
-#   docker run --rm bwb/level2-ghost --ocr /app/sample.png
+# TODO(stretch): add "sample.png" to srcs, then OCR it with docker run.
 pkg_tar(
     name = "app_layer",
     srcs = [":app"],
@@ -67,19 +52,16 @@ pkg_tar(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
+    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
 )
 
-# TODO(surface): the `tesseract` binary is a ghost. Wrap the hermetic apt tar as
-# a layer and add it below:
-#   layer_from_tar(name = "tesseract_layer_img", src = "@tesseract_apt//:flat")
+# TODO(task 1): wrap "@tesseract_apt//:flat" in a layer_from_tar.
 image_manifest(
     name = "image",
     base = image("python_base_img"),
     entrypoint = ["/app/app"],
-    # TODO(deep): tesseract can't locate its language data without a pointer:
-    #   env = {"TESSDATA_PREFIX": "/usr/share/tesseract-ocr/5/tessdata/"},
-    # TODO(surface): add ":tesseract_layer_img" to layers so the engine + data
-    #   land in the image.
+    # TODO(task 2): set env TESSDATA_PREFIX so tesseract finds its data.
+    # TODO(task 1): add the tesseract layer to layers.
     layers = [":app_layer_img"],
 )
 
@@ -95,12 +77,12 @@ filegroup(
     output_group = "tarball",
 )
 
-# SURFACE + DEEP — daemonless (tar driver). RED until the layer + env are added.
+# Tasks 1–2 — daemonless (tar driver). Red until the layer + env are added.
 container_structure_test(
     name = "image_structure_test",
-    size = "small",
+    size = "medium",
     configs = ["image_test.yaml"],
     driver = "tar",
     image = ":image.tar",
-    tags = ["manual", "surface"],
+    tags = ["manual"],
 )

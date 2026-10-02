@@ -1,8 +1,15 @@
-# Lab R — remote cache, remote execution, and "without the bytes"
+# Remote lab — cache, registry, remote execution, "without the bytes"
 
-Module 4 of the deck talks about a shared cache and RBE. This lab runs both **on
-your machine**, with no account, no API key, and — for the cache and the
-registry — no Docker either. The services are ordinary Bazel targets:
+**Goal:** run the delivery half of the deck on your own machine: a shared remote
+cache, an OCI registry, lazy push, Build without the Bytes, and a remote
+execution cluster. You don't need an account or an API key, and the cache and
+registry don't need Docker either.
+
+**Deck concepts:** daemonless push · only missing blobs move · eager vs. lazy
+push · Building Without Bytes · remote cache + RBE · reading an image with no
+daemon (`crane`, OCI layouts).
+
+## Start
 
 ```bash
 bazel run //tools:local_cache       # REAPI cache      -> localhost:9092
@@ -10,8 +17,19 @@ bazel run //tools:local_registry    # OCI registry     -> localhost:5000
 bazel run //tools:local_rbe         # remote execution -> localhost:8980 (needs Docker)
 ```
 
-Each one takes `-- stop`. The cache also takes `-- purge` (deletes the store, so
-your next build is genuinely cold).
+Each one takes `-- stop`. The cache also takes `-- purge`, which deletes the
+store so your next build is genuinely cold.
+
+## Tasks
+
+| # | Run | Done when |
+|---|---|---|
+| 1 | `bazel build --config=local-cache //samples/...` twice, with `bazel clean` in between | the second build reports ~260 remote cache hits (§1) |
+| 2 | `bazel build --config=local-bwb //samples/python:image.tar` | the output on disk is KB instead of MB (§2) |
+| 3 | `bazel run //samples/python:push`, edit `app.py`, push again | the second push uploads only the changed blobs (§3) |
+| 4 | `bazel run --config=local-bwb ... //samples/python:push_lazy` | 0 blobs come from disk (§3) |
+| 5 | `bazel run //tools:crane_cli -- manifest localhost:5000/bwb/python-graphviz:latest` | you've read a pushed image with no daemon (§3) |
+| 6 | `bazel test --config=local-rbe //samples/python/... //labs/playground/...` | tests run on the local Buildfarm, and you know why `//...` doesn't (§4) |
 
 Every number below was measured against this repo. Where something does not
 work, it says so.
@@ -44,11 +62,11 @@ bazel build --config=local-cache //samples/...      # warm: downloads
 The second run:
 
 ```
-INFO: 378 processes: 258 remote cache hit, 120 internal.
+INFO: 380 processes: 260 remote cache hit, 120 internal.
 ```
 
 A `bazel clean` threw away every local output and the build still did almost no
-work. That is the "shared pantry" slide, for real — and on a team, those 258 hits
+work. That is the "shared pantry" slide, for real — and on a team, those 260 hits
 are someone else's build, not yours.
 
 > **`--disk_cache=` is doing real work here.** `.bazelrc` turns on a disk cache
@@ -69,10 +87,10 @@ are never materialised locally unless something actually asks for them.
 
 | `//samples/python:image.tar` | on disk afterwards |
 |---|---|
-| normal build | **258 MB** |
-| `--config=local-bwb` | **177 KB** |
+| normal build | **82 MB** |
+| `--config=local-bwb` | **742 KB** |
 
-Same build, same graph, same result — 1500× less local I/O. For container images
+Same build, same graph, same result — 110× less local I/O. For container images
 this is the whole game: an image is a set of blobs, and the machine that
 *assembles* it rarely needs to hold them.
 
@@ -122,6 +140,25 @@ ByteStream — no giant runfiles, no remote executor. Compare the two targets'
 runfiles: `push_eager` carries 4 layer blob entries, `push_lazy` carries a
 `layer_hints` file instead.
 
+### Read the image back, with no daemon
+
+A registry is also a way to *read* an image. `crane` is a pinned static binary,
+so nothing needs to be installed:
+
+```bash
+bazel run //tools:crane_cli -- manifest localhost:5000/bwb/python-graphviz:latest
+bazel run //tools:crane_cli -- export localhost:5000/bwb/python-graphviz:latest - \
+  | tar tf - | grep bin/dot
+```
+
+The `grep` prints nothing, and that's the point: the Python sample ships no
+`dot`. That's the ghost from the deck, proven without starting a container.
+
+On disk, the default output is a *sparse* OCI layout (`image_sparse_oci_layout/`)
+that deliberately leaves out the layer bytes, which is why `skopeo` and `dive`
+bounce off it. Ask for a real one with `bazel build //samples/python:image.oci`
+(a directory of symlinks) or `:image.oci.tar` (real bytes, packed).
+
 ---
 
 ## 4 · Remote execution (advanced)
@@ -132,29 +169,35 @@ bazel build --config=local-rbe //samples/python:image
 bazel test  --config=local-rbe //samples/python/... //labs/playground/...
 ```
 
-**What works.** Everything that isn't downstream of an apt layer — 11 of 11 tests
+**What works.** Everything that isn't downstream of an apt layer — 6 of 6 tests
 green, including both daemonless `container_structure_test`s:
 
 ```
-338 processes: 65 remote, 4 local, 271 internal, 4 action cache hit
-Executed 7 out of 11 tests: 11 tests pass.
+173 processes: 3 action cache hit, 120 internal, 4 local, 53 remote.
+Executed 6 out of 6 tests: 6 tests pass.
 ```
 
-**What doesn't, and why it's the point.** `bazel test --config=local-rbe //...`
-fails:
+**What doesn't, and why it's the point.** On a laptop whose gcc differs from
+the worker's, `bazel test --config=local-rbe //...` fails (here: Ubuntu 22.04,
+gcc 11, against the Ubuntu 24.04 / gcc 13 worker):
 
 ```
-Compiling support/malloc/dynarray_emplace_enlarge.c [for tool] failed:
-absolute path inclusion(s) found in rule '@@gawk+//:support':
+Compiling version.c [for tool] failed:
+absolute path inclusion(s) found in rule '@@gawk+//:awk':
   '/usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h'
-  '/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h'
 ```
 
-Bazel's auto-detected C++ toolchain hardcodes **your machine's** GCC 13 headers by
-absolute path. Locally that is invisible, because those files are right there.
-On a worker they do not exist. `gawk` is a build tool for `rules_distroless`'
-genrule, so this takes out every apt-layer target: `//samples/distroless`,
-`//labs/level2_ghost`, `//labs/level3_hardware`.
+Bazel's auto-detected C++ toolchain describes **your machine's** compiler,
+including the list of system header directories it's allowed to include. The
+action then runs on the worker, with the *worker's* gcc and its headers. They
+aren't in your machine's list, so Bazel rejects the action. `gawk` is a build
+tool for `rules_distroless`' genrule, so this takes out every apt-layer target:
+`//samples/distroless`, `//labs/level0_graphviz`, `//labs/level2_ghost`,
+`//labs/level3_hardware`.
+
+If your host happens to run the same gcc as the worker (a GitHub Ubuntu 24.04
+runner does), it passes. That's a coincidence, not hermeticity; CI checks
+both sides of it.
 
 Nothing is broken. Remote execution simply *reported* a non-hermeticity your
 laptop had been quietly covering for — which is the single best argument for

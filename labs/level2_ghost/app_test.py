@@ -1,12 +1,6 @@
-"""Proves the ghost in pure Python: the wrapper imports fine, but with no
-`tesseract` binary on PATH the engine call fails loudly. The image (structure
-test) is where we make the binary real.
+"""Task 0: the wrapper imports, but with no `tesseract` on PATH the engine fails.
 
-Note the empty PATH below. The point of this level is that `pip install
-pytesseract` does not install an engine — so the test has to guarantee the
-engine is absent rather than *assume* it. Without that, this test would quietly
-pass or fail depending on whether the machine running it happens to have
-`tesseract` installed: exactly the kind of host leakage the workshop is about.
+PATH is emptied so the result can't depend on whether the host has tesseract.
 """
 
 import os

@@ -73,7 +73,7 @@ each module's Lab picks up from the block with its number.
 ```bash
 # 0 · clone, then build the images (skips the Node toolchain the deck needs)
 git clone https://github.com/tweag/bazelcon-2026-workshop-docker-build
-bazel build //samples/...
+cd bazelcon-2026-workshop-docker-build && bazel build //samples/...
 
 # 1 · the rules_img image, then the Dockerfile baseline for contrast
 bazel run //samples/python:image_load && docker run --rm bwb/python-graphviz
@@ -177,7 +177,11 @@ Tasty maybe, but never reproducible: each `RUN` grabs *today's* ingredients.
 </div>
 <div>
 
+<div class="code-pin">
+
 <<< ../samples/python/Dockerfile#dockerfile docker {4-6}
+
+</div>
 
 </div>
 </div>
@@ -202,7 +206,7 @@ be perfect today, and rotten (or silently *different*) tomorrow.
 
 ---
 
-# A sandwich of tars
+# Container: A sandwich of tars
 
 **Open the tray.** We've been saying *layer* — here's what one actually is. A
 container image is a **stack of tar layers** plus a small JSON *image manifest*
@@ -229,7 +233,7 @@ standard**: the open format every registry and runtime speaks.
 
 ---
 
-# The same layer, only once
+# CAS: The same layer, only once
 
 That shared start has a name. Each layer ships as a **blob**, and its name is the
 `sha256` **digest of its own bytes** — same bytes, same digest, so it's
@@ -386,7 +390,11 @@ FROM python:3.12-slim-bookworm
 
 <div class="xlate-arrow leading-none my-1">↓</div>
 
+<div class="code-pin" style="--pin: '◀ the pin: bytes, not a tag'">
+
 <<< ../MODULE.bazel#base_pull python {7}
+
+</div>
 
 ```python
 base = image("python_base_img")   # samples/python/BUILD.bazel — the consuming side
@@ -611,7 +619,7 @@ docker run --rm bwb/python-graphviz
 
 ---
 
-# The "Docker tax"
+# Reducing the "Docker tax"
 
 Hermeticity's payoff is **efficiency**. Same suite, two ways — `py_test`
 (sandboxed, cached, incremental) vs. a `docker build` that pip-installs and runs
@@ -695,7 +703,7 @@ itself. The `dot` from Module 0, now a **hermetic, pinned** layer on `scratch`.
 
 ---
 layout: two-cols-header
-layoutClass: gap-6
+layoutClass: gap-6 !grid-cols-[2fr_1fr]
 ---
 
 # Two services, one shared blob
@@ -705,7 +713,11 @@ service's own app layer differs.
 
 ::left::
 
+<div class="code-sm">
+
 <<< ../samples/shared_layers/BUILD.bazel#shared python {*}{maxHeight:'250px'}
+
+</div>
 
 ::right::
 
@@ -722,10 +734,10 @@ Any **byte-identical** layer dedupes automatically — prep once, plate twice.
 
 ---
 layout: two-cols-header
-layoutClass: gap-6
+layoutClass: gap-x-6 gap-y-3 !grid-cols-[3fr_2fr]
 ---
 
-# When the image won't run
+# Lab: When the image won't run
 
 The layers composed, the tests were green — and it still dies on `docker run`.
 Two probes, neither of which needs a daemon.
@@ -734,6 +746,8 @@ Two probes, neither of which needs a daemon.
 
 ### The one that fails silently
 
+<div class="code-sm">
+
 ```console
 $ bazel test //labs/level2_ghost:image_structure_test
 PASSED
@@ -741,30 +755,34 @@ $ docker run --rm bwb/level2-ghost
 exec /app/app: no such file or directory
 ```
 
-<<< ../MODULE.bazel#mergedusr python {*}{maxHeight:'150px'}
+<<< ../MODULE.bazel#mergedusr python
+
+</div>
 
 ::right::
 
 ### Look inside without running it
 
+<div class="code-sm">
+
 ```bash
 # 1 · what is actually in this layer?
+bazel build //labs/level2_ghost:app_layer
 tar tf bazel-bin/labs/level2_ghost/app_layer.tar
 
-# 2 · why is a rung red? decode the
+# 2 · why is a test red? decode the
 #     structure test's bare FAIL
 bazel run //labs:explain -- level2
 ```
 
+</div>
+
 The structure test `lstat`s paths in an unpacked tar — it never **execs**
 anything, so it passes happily on an image that cannot run a single binary.
 
-<div class="mt-3 opacity-70 text-sm text-center">
+::bottom::
 
-A green test proves the *files* are there — not that the **loader** can find them.
-Outside Bazel it gets stranger still; that's Module 4, and the appendix.
-
-</div>
+<div class="opacity-70 text-sm text-center">A green test proves the <em>files</em> are there — not that the <strong>loader</strong> can find them. Stranger still outside Bazel: Module 4, appendix.</div>
 
 
 ---
@@ -912,12 +930,11 @@ not layer *bytes*.**
   descriptor flows through the build graph.
 - **Only-missing-blobs move** — push and pull skip anything the other side
   already has.
-- **Lazy pulls** — reference a base by digest and materialize its bytes only when
-  a step needs them (`layer_handling = "lazy"`, in `MODULE.bazel`).
+- **Lazy pulls** — `layer_handling = "lazy"`: base bytes are fetched only when a step needs them.
 
 <div class="flex justify-center mt-2">
 <img src="./images/without-bytes.png"
-     class="max-h-48 w-auto object-contain"
+     class="max-h-56 w-auto object-contain"
      alt="an antique plate: small sha256 digest cards travelling build → registry → run across the top, while the heavy layer blobs — prosciutto, herbs, béchamel — stay parked on the shelf of the CAS vault below, dashed leader lines tying each card back to its blob" />
 </div>
 
@@ -931,13 +948,18 @@ Most of an image's bytes are the base + deps you *didn't* change — so most of 
 
 # The pantry, chain-wide: cache + RBE
 
-Scale the shared pantry from one kitchen to a **restaurant chain**: one commissary
-larder, and every kitchen on the chain draws from it.
+Scale the pantry from one kitchen to a **restaurant chain**: one commissary larder, every kitchen draws from it.
 
-<div class="flex justify-center mt-2">
+<div class="flex justify-center mt-2 mb-6">
+<div class="plate-labels">
 <img src="./images/remote-cache-rbe.png"
-     class="max-h-60 w-auto object-contain"
+     class="max-h-64 w-auto object-contain"
      alt="an antique plate: a tall pantry of labelled jars at the centre, labelled 'the remote cache — one content-addressed pantry', one green jar leader-lined out to three kitchens that all draw from it — a cook at his bench ('your laptop'), a hotel kitchen pass hung with tickets ('CI — the hotel pass'), and a long range of five line cooks working in parallel ('line cooks — RBE workers')" />
+<span aria-hidden="true" style="left:20%; top:11%">your laptop</span>
+<span aria-hidden="true" style="left:11%; top:97%">CI — the hotel pass</span>
+<span aria-hidden="true" style="left:40%; top:101%">the remote cache —<br>one content-addressed pantry</span>
+<span aria-hidden="true" style="left:80%; top:19%">line cooks — RBE workers</span>
+</div>
 </div>
 
 ```bash
@@ -959,7 +981,7 @@ class: text-center
 # Takeaways
 
 **Declare, don't script** — a layer is a build output, not a step a daemon runs.<br>
-**Split by volatility** — layers build **in parallel**, identical ones **dedupe**, `scratch` ships **thin**.<br>
+**Split by volatility** — layers build **in parallel**, identical ones **dedupe**<br>
 **Go daemonless** — assemble, validate and push with no socket, nothing privileged.<br>
 **Share the pantry** — a **remote cache** ＋ **RBE** rebuilds nothing, and moves only missing blobs.<br>
 **Build without bytes** — the tars stay in CAS; only digests travel.<br>
@@ -968,14 +990,14 @@ class: text-center
 <div class="mt-6 opacity-70">
 
 What you build is byte-for-byte what runs — layers are just build outputs.<br>
-Coming from `rules_oci`? Same declarative model; the win is keeping the **bytes**
+Coming from `rules_oci`? Same declarative model; the difference is keeping the **bytes**
 out of the graph.
 
 </div>
 
 <div class="mt-4 text-sm opacity-70">
 
-Keep going: `bazel run //labs:progress` — the self-paced ladder through the three
+Keep going: `bazel run //labs:progress` — the self-guided labs through the three
 walls (build-time · the ghost · hardware).
 
 </div>
@@ -1148,7 +1170,7 @@ bazel run //tools:crane_cli -- \
 `bin/dot`. The ghost from Module 2, proven without ever starting a container.
 
 Worth skipping: even a real `image.oci` is mostly **symlinks** into the execroot —
-`du -sh` reads **60K** where the content is **325M**, so materializing it means
+`du -sh` reads **12K** where the content is **78M**, so materializing it means
 `cp -rL` (or `image.oci.tar`, which has real bytes).
 
 <div class="mt-4 opacity-70 text-sm">
@@ -1156,7 +1178,7 @@ Worth skipping: even a real `image.oci` is mostly **symlinks** into the execroot
 Needs **nothing installed**: both `crane` and the registry are pinned static
 binaries, fetched by Bazel. And a layout is a set of dangling links until you ask
 for them — under `--remote_download_minimal` the bytes may never come home at
-all, taking `image.tar` from **258 MB** to **177 KB**.
+all, taking `image.tar` from **82 MB** to **742 KB**.
 
 </div>
 

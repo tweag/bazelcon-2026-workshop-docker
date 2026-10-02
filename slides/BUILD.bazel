@@ -71,9 +71,13 @@ slidev_bin.slidev(
 
 # Slidev dev server + PDF export still run through the host wrapper (Phase 2 makes
 # the PDF export hermetic too — it needs a Bazel-provided Chromium). `bazel run`.
+# The wrapper gets the Bazel-pinned Node (MODULE.bazel, 24.x), not the host's.
 sh_binary(
     name = "present",  # bazel run //slides:present  -> dev server w/ hot reload
     srcs = ["slidev.sh"],
+    data = ["@rules_nodejs//nodejs:current_node_runtime"],
+    env = {"SLIDEV_NODE": "$(NODE_PATH)"},
+    toolchains = ["@rules_nodejs//nodejs:current_node_runtime"],
 )
 
 sh_binary(
@@ -85,6 +89,9 @@ sh_binary(
         "--output",
         "../docs/building-without-bytes.pdf",
     ],
+    data = ["@rules_nodejs//nodejs:current_node_runtime"],
+    env = {"SLIDEV_NODE": "$(NODE_PATH)"},
+    toolchains = ["@rules_nodejs//nodejs:current_node_runtime"],
 )
 
 # Sanity check that the deck + transcluded sources are all present (TASK §3.9).

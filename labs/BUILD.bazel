@@ -11,17 +11,36 @@ compile_pip_requirements(
     requirements_txt = "requirements_lock.txt",
 )
 
-# The depth meter / guide: bazel run //labs:progress
+# Lists every lab and task: bazel run //labs:progress
 sh_binary(
     name = "progress",
     srcs = ["progress.sh"],
 )
 
-# Why is my rung red?  bazel run //labs:explain
+# Why is my test red?  bazel run //labs:explain
 # container_structure_test reports via JUnit XML, so the Bazel console only
 # shows `level=fatal msg=FAIL`. This prints the per-check reason.
 py_binary(
     name = "explain",
     srcs = ["explain.py"],
     main = "explain.py",
+)
+
+# Your progress, one line per task: bazel test -k //labs:tasks
+# Red until you solve it. `manual` keeps it out of //labs/... (setup stays green).
+test_suite(
+    name = "tasks",
+    tags = ["manual"],
+    tests = [
+        "//labs/level0_graphviz:image_structure_test",
+        "//labs/level1_buildtime:app_test",
+        "//labs/level1_buildtime:image_layer_test",
+        "//labs/level1_buildtime:image_build_test",
+        "//labs/level2_ghost:app_test",
+        "//labs/level2_ghost:image_structure_test",
+        "//labs/level3_hardware:app_test",
+        "//labs/level3_hardware:image_structure_test",
+        "//labs/level4_shared:groups_test",
+        "//labs/level4_shared:shared_layers_test",
+    ],
 )

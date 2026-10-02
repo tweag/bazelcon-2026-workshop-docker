@@ -23,7 +23,6 @@ py_test(
     size = "small",
     srcs = ["app_test.py"],
     imports = ["."],
-    tags = ["surface"],
     deps = [":app"],
 )
 
@@ -37,6 +36,7 @@ pkg_tar(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
+    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
 )
 
 image_manifest(
@@ -44,7 +44,6 @@ image_manifest(
     base = image("python_base_img"),
     entrypoint = ["/app/app"],
     layers = [":app_layer_img"],
-    tags = ["deep"],
 )
 
 # The layer really carries the prebuilt manylinux wheel — no compiler ran, and
@@ -56,11 +55,9 @@ py_test(
     args = ["$(rootpath :app_layer)"],
     data = [":app_layer"],
     main = "layer_test.py",
-    tags = ["deep"],
 )
 
 build_test(
     name = "image_build_test",
-    tags = ["deep"],
     targets = [":image"],
 )

@@ -1,10 +1,4 @@
-"""Level 1 payload — prove a Rust + OpenSSL extension wheel actually works.
-
-`cryptography` ships prebuilt manylinux wheels, so no compiler runs at build
-time *if* a wheel exists for the target platform. When one doesn't, pip falls
-back to building the Rust extension from source against the host's OpenSSL —
-the non-hermetic "build-time trap" this level is about.
-"""
+"""Level 1 payload: prove the prebuilt cryptography (Rust + OpenSSL) wheel works."""
 
 from cryptography.fernet import Fernet
 

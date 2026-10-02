@@ -1,0 +1,54 @@
+# Level 0 — reference solution (green). The fills vs. the skeleton: base +
+# entrypoint (the Dockerfile translation) and the pinned `dot` layer.
+load("@container_structure_test//:defs.bzl", "container_structure_test")
+load("@rules_img//img:image.bzl", "image_manifest")
+load("@rules_img//img:layer.bzl", "layer_from_tar")
+load("@rules_img//img:load.bzl", "image_load")
+load("@rules_img_images.bzl", "image")
+
+package(default_visibility = ["//visibility:public"])
+
+layer_from_tar(
+    name = "app_layer_img",
+    src = "//samples/python:app_layer",
+    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+)
+
+layer_from_tar(
+    name = "graphviz_layer_img",
+    src = "@graphviz_lab_apt//:flat",  # task 2: RUN apt-get install graphviz
+)
+
+image_manifest(
+    name = "image",
+    base = image("python_base_img"),  # task 1: FROM
+    entrypoint = [  # task 1: ENTRYPOINT
+        "/app/app",
+        "--render",
+        "/tmp/supply_chain.png",
+    ],
+    layers = [
+        ":app_layer_img",
+        ":graphviz_layer_img",
+    ],
+)
+
+image_load(
+    name = "image_load",
+    image = ":image",
+    tag = "bwb/level0-graphviz:latest",
+)
+
+filegroup(
+    name = "image.tar",
+    srcs = [":image_load"],
+    output_group = "tarball",
+)
+
+container_structure_test(
+    name = "image_structure_test",
+    size = "medium",
+    configs = ["//labs/level0_graphviz:image_test.yaml"],
+    driver = "tar",
+    image = ":image.tar",
+)

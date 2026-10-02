@@ -15,11 +15,23 @@ test --test_output=errors
 # Friendlier disk-cache so attendees see warm-cache speedups without a remote.
 # (Override with --disk_cache= or a real --remote_cache=... in CI.)
 build --disk_cache=~/.cache/bazel-disk
+# Every image tar lands in it a second time; cap it so it can't eat the laptop.
+build --experimental_disk_cache_gc_max_size=5G
+
+# `bazel test //labs/...` would otherwise also build every target the pattern
+# matches, e.g. each image_load's Docker tar (~6 GB that no test reads). They
+# still build on demand: `bazel run //labs/<lab>:image_load`.
+test --build_tests_only
+
+# Layers with `optimize = True` are rewritten (duplicate files become hardlinks)
+# and recompressed with this. zstd: ~8% smaller than gzip, faster to unpack.
+# Readers need Docker >= 23 / containerd >= 1.5; every registry stores it as-is.
+build --@rules_img//img/settings:compress=zstd
 
 # Surface this repo's own conventions.
 common --enable_platform_specific_config
 
-# --- Remote cache / remote execution (labs/REMOTE.md) ------------------------
+# --- Remote cache / remote execution (labs/remote/README.md) ------------------------
 # None of these are on by default: they need an endpoint and an API key, which
 # you put in .bazelrc.user (gitignored, try-imported at the bottom of this file):
 #

@@ -31,11 +31,20 @@ concurrency:
 
 jobs:
   export:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: `latest` moves when GitHub rolls a new image
     permissions:
       contents: write # only to attach the PDF to a published release
     steps:
       - uses: actions/checkout@v5
+
+      # The runner ran out of disk mid-export (Vite's dependency bundling, then
+      # a 30 s per-slide timeout): locally the export needs ~200 MB, so this is
+      # the runner's own headroom. Same cleanup as the Bazel jobs in ci.yml.
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          df -h /
 
       - uses: actions/setup-node@v5
         with:
@@ -47,6 +56,7 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
           npm run export # -> ../docs/building-without-bytes.pdf
+          df -h /
 
       - name: Upload the PDF as a build artifact
         uses: actions/upload-artifact@v4

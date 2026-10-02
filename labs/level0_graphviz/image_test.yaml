@@ -1,0 +1,19 @@
+# Level 0 checks (tar driver, daemonless). Shared by the skeleton and solution/.
+schemaVersion: "2.0.0"
+
+fileExistenceTests:
+  - name: "the app layer is in the image"
+    path: "/app/app"
+    shouldExist: true
+  # Task 1 — FROM python:3.12-slim-bookworm
+  - name: "the python base is underneath"
+    path: "/usr/local/bin/python3"
+    shouldExist: true
+  # Task 2 — RUN apt-get install graphviz
+  - name: "the dot binary is bundled"
+    path: "/usr/bin/dot"
+    shouldExist: true
+
+metadataTest:
+  # Task 1 — ENTRYPOINT ["python", "/app/app.py", "--render", ...]
+  entrypoint: ["/app/app", "--render", "/tmp/supply_chain.png"]
