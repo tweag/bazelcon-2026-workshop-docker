@@ -16,6 +16,11 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "deps"
+    ignore:
+      # Slidev 53 refuses `<<< ../samples/...` snippets outside slides/ — the
+      # deck transcludes repo files as live code. Revisit after the workshop.
+      - dependency-name: "@slidev/cli"
+        update-types: ["version-update:semver-major"]
 # Note: the Bazel module deps (MODULE.bazel) and the rules_python / rules_distroless
 # locks aren't managed here — Dependabot has no bzlmod ecosystem, and the pip
 # locks are regenerated via `bazel run //...:requirements.update`, not pip.
