@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # to diff against the commit you forked from
       - uses: ./.github/actions/labs-runner
@@ -145,7 +145,7 @@ jobs:
       matrix:
         lab: [level0, level1, level2, level3, level4, playground]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/labs-runner
       - run: python3 labs/ci/labs_ci.py walkthrough ${{ matrix.lab }}
 
@@ -157,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/labs-runner
       - run: bazel test //labs/... --test_output=errors
 
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/labs-runner
 
       - name: Level 0 — dot renders once its plugins are registered
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/labs-runner
 
       - name: //labs:progress and //labs:explain run

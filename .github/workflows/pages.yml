@@ -28,7 +28,7 @@ jobs:
     if: ${{ github.event.repository.private == false }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Enable Pages (Source = GitHub Actions) from the workflow itself.
       - uses: actions/configure-pages@v6

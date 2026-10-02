@@ -9,7 +9,7 @@ jobs:
   bazel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # A hosted runner has ~14 GB free and ships ~25 GB of toolchains this
       # workshop never touches. Building every sample and lab image — each a
@@ -79,7 +79,7 @@ jobs:
   remote:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Same reason as the `bazel` job above: the images do not fit on a
       # stock runner next to a disk cache, and overflowing kills it silently.
@@ -169,7 +169,7 @@ jobs:
   slide-commands:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Same reason as the `bazel` job above.
       - name: Make room on the runner
@@ -194,7 +194,7 @@ jobs:
   rbe:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Make room on the runner
         run: |
@@ -244,7 +244,7 @@ jobs:
   slides:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24

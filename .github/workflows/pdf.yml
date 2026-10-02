@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: write # only to attach the PDF to a published release
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # The runner ran out of disk mid-export (Vite's dependency bundling, then
       # a 30 s per-slide timeout): locally the export needs ~200 MB, so this is
