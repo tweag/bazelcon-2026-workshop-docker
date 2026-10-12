@@ -76,6 +76,20 @@ filegroup(
     ]
 ]
 
+# --- Opt-in hermetic C/C++ toolchain (--config=hermetic-cc) ------------------
+# One thing in the graph compiles C: rules_distroless builds `gawk` from source
+# for every apt layer (//samples/distroless, labs Levels 0, 2 and 3). By default
+# Bazel autodetects the host compiler for that, so those targets need gcc/clang
+# installed. `--config=hermetic-cc` swaps in a pinned zig cc instead: nothing to
+# install. It is deliberately NOT registered here, so the default stays the
+# autodetected host compiler, and the remote-execution lab (labs/remote/README.md
+# §4) still shows the non-hermeticity it is about. The zig SDK is only
+# downloaded when the config is used.
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.3.0")
+
+zig_toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(zig_toolchains, "zig_sdk")
+
 # --- Python toolchain ---
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(

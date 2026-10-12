@@ -24,10 +24,11 @@ Proposal: [`../PROPOSAL.md`](../PROPOSAL.md).
 
 **Format:** ~90 min, 5 modules + wrap-up, each = short concept + a Lab.
 Attendees clone the repo and run real targets. An early **agenda ("The menu")**
-slide projects this run-sheet, a **lab card** slide right after it lists every
-command, and each section divider says where we are.
+slide projects this run-sheet, a **lab card** slide right after it gives the two
+ways to follow along (the README setup on a laptop, or fork + PR with GitHub
+Actions doing the building), and each module closes on its own **Lab** slide.
 
-**Budget:** the deck is **40 main slides ＋ 8 appendix**, retimed to **~79.5 min of
+**Budget:** the deck is **44 main slides ＋ 10 appendix**, retimed to **~79.5 min of
 content in the 90-min slot** — the remaining ~10.5 min is deliberate slack for
 questions, a slow laptop, and a demo that misbehaves. Don't spend it in advance.
 
@@ -54,8 +55,12 @@ verbs) sits at the Module 3 divider as the pivot between them.
 **Lab 0 is the schedule risk.** `bazel build //...` pulls the Node/Slidev
 toolchain, `@pypi`, the 162-deb `@graphviz_apt` and (via `//labs/...`)
 `@tesseract_apt`/`@pocl_apt` — 10–20 min on conference wifi. The lab card says
-`bazel build //samples/...` instead, and the README asks attendees to run it
-**before they arrive**. If the room is cold anyway, keep talking through Module 0
+`bazel test //samples/... //labs/... //tools/...` instead (the README's setup line),
+and the README asks attendees to run it **before they arrive**. Anyone who can't
+install Bazel takes the card's other column: fork (public), enable Actions, edit in
+github.dev, and open a PR into their own fork's `main`. The labs workflow posts a
+per-task table in the run's Summary. Say "into **your** fork, not upstream" out loud:
+upstream runs the maintainers' checks. If the room is cold anyway, keep talking through Module 0
 while it downloads; don't wait on it.
 
 ---
@@ -176,11 +181,20 @@ the columns — "declared inputs" and "caches the rest" on the Bazel side — an
 "two different guarantees, and you want both" now opens the footer, since the new
 title no longer carries that thesis.)*
 
-> **Lab 0 (4m):** `git clone … && bazel build //samples/...` — **not** `//...`,
+> **Lab 0 (4m):** `git clone … && bazel test //samples/... //labs/... //tools/...` — **not** `//...`,
 > which drags in the Node toolchain the deck needs. Then note: these very slides
 > are a build target — `bazel build //slides:build`. The deck is an artifact of
 > the same graph as the images. CI even enforces it
 > (`bazel query 'somepath(//slides, //samples/...)'` must be non-empty).
+>
+> *(On screen: the **Lab 0** slide — the problem, the commands, and a "you're done when" line. Leave it up for the whole lab; it closes Module 0.)*
+>
+> **The one rough edge: a C compiler.** The apt-layer images build `gawk` from
+> source with whatever compiler Bazel finds on the laptop. Someone without one sees
+> an error naming `gawk`, `cc` or `cpp:toolchain_type`. Don't debug it with them:
+> "re-run with `--config=hermetic-cc`". That swaps in a pinned zig cc, and the
+> image digests come out identical. It's opt-in, not the default, only because
+> `labs/remote/README.md` §4 needs the host compiler to show what RBE catches.
 
 ---
 
@@ -266,7 +280,7 @@ shipped by `rules_distroless`. It runs in the **loading** phase, reads
 lockfile, and generates the `@graphviz_apt` repo whose `:flat` target is a tar of
 the resolved `.deb`s. Re-lock with `bazel run @graphviz_apt//:lock`. Then in the
 BUILD file, `layer_from_tar` over `@graphviz_apt//:flat` turns those `.deb`s into
-**one content-addressed layer**. So: **no network in any build action**, and the
+**one content-addressed layer**. So: **no build action needs the network**, and the
 layer has a digest — which is what makes it cacheable and dedupable." *(Expect
 "wait, where does it download then?" — the answer is the loading phase, and the
 lockfile is what makes that safe. **Module 2** shows this same layer carrying a
@@ -379,6 +393,8 @@ shows a captioned slot — say the line anyway.)*
 > workshop:** the system dep hidden in a `RUN` vs. forced into an explicit layer.
 > (We make it *hermetic* in Module 2.) Then run
 > `bazel run //benchmark/pytest_tax:compare` for the docker-tax timings.
+>
+> *(On screen: the **Lab 1** slide — the problem, the commands, and a "you're done when" line. Leave it up for the whole lab; it closes Module 1.)*
 
 ---
 
@@ -438,41 +454,6 @@ prints the shared blob digests — prep once, plate twice. What can be shared? T
 makes the dedup automatic; nobody has to declare it." (On screen:
 `../samples/shared_layers/BUILD.bazel#shared`.)
 
-**When the image won't run.** *(New in the 2026-09-09 review pass, answering
-"how would you inspect the contents if the generated image is broken?". Placed
-here, at the end of Module 2, because "layering a real directory over a symlink
-replaces it" is a **layer-composition** fact — it is only legible once the
-catering and distroless slides have landed, and Lab 2's tasks hit it
-within minutes.)*
-"This is the module's one war story, and it is the sharpest gotcha in the repo
-because it fails **silently**. Debian's `.deb`s still ship files under `/lib`;
-a real distro base has `/lib` as a **symlink into `/usr`**. Layer a real
-directory over that symlink and it doesn't merge — it **replaces** it, which
-amputates the base's `/usr/lib`. Every binary in the image then fails to exec,
-and the error you get is the world's least helpful: `no such file or directory`
-about a file that is plainly right there. `mergedusr = True` rewrites
-`./lib -> ./usr/lib` so the layers compose. (`//samples/distroless` deliberately
-does *not* set it: on `scratch` there is no `/usr` symlink to clobber, and the
-ELF interpreter has to stay at `/lib64`.)"
-
-*(The **real** lesson, and the reason this slide exists: our
-`container_structure_test` was **green** on those images. It `lstat`s paths in an
-unpacked tar — it never **execs** anything. So it happily certified an image that
-could not run a single binary. That sentence is lifted from
-`.github/workflows/labs.yml`, where a `docker run` smoke job now covers the gap.
-Say it plainly: a green structure test proves the *files* are there, not that the
-**loader** can find them. This is also the shortest honest answer to "what can
-`container_structure_test` actually test?" — TASK §12 wanted a whole slide for
-that; this clause does the load-bearing part.)*
-
-*(Then the two probes, both daemonless, both needing nothing installed:
-`tar tf bazel-bin/labs/level2_ghost/app_layer.tar` answers "what is actually in
-this layer?" — the repo already does exactly this in
-`labs/level1_buildtime/layer_test.py` — and `bazel run //labs:explain -- level2`
-decodes the structure test's bare `FAIL` into the check that failed. Do **not**
-mention sparse layouts or lazy pulls here; that is Module 4's payoff and there is
-an appendix slide for it. One forward pointer is enough.)*
-
 > **Lab 2 (10m):**
 > 1. Edit one line in `app.py`, rebuild → only the app layer rebuilds (watch the
 >    cache hits) — the catering line in action.
@@ -480,6 +461,8 @@ an appendix slide for it. One forward pointer is enough.)*
 >    → runs `dot` (graphviz 2.43) from a fully hermetic, pinned layer on scratch.
 > 3. `bazel run //samples/shared_layers:digests` → two images, shared base +
 >    common layer; the diff prints the shared blob digests (built once).
+>
+> *(On screen: the **Lab 2** slide — the problem, the commands, and a "you're done when" line. Leave it up for the whole lab; it closes Module 2.)*
 
 ---
 
@@ -551,6 +534,8 @@ That distinction gets asked about every time.)*
 >    on the same port), then `bazel run //samples/python:push`; edit one line in
 >    `app.py` and push again — only the changed app blob uploads (dedup by digest;
 >    observed 7 → 3 → 2 blob transfers).
+>
+> *(On screen: the **Lab 3** slide — the problem, the commands, and a "you're done when" line. Leave it up for the whole lab; it closes Module 3.)*
 
 ---
 
@@ -610,6 +595,13 @@ Module 1 almost verbatim. The one line worth keeping is now on Takeaways: "comin
 from `rules_oci`? Same declarative model; the win is keeping the bytes out of the
 graph." The Dockerfile-vs-Bazel comparison table moved to the appendix.)*
 
+> **Lab 4 (take-home):** the closing slide of Module 4 hands the room
+> `labs/remote/README.md` §1. `bazel run //tools:local_cache`, then
+> `bazel clean && bazel build --config=local-cache //samples/...` twice. The warm
+> run reports a `remote cache hit` for nearly every process, right after a clean.
+> No time is budgeted for it in the room: say "this one's homework" and move on
+> to Takeaways. It keeps the menu's promise of a Lab in every module.
+
 ---
 
 # Wrap-up + Q&A (5m)
@@ -650,12 +642,14 @@ tighten hermeticity incrementally · cross-arch → multi-platform indexes, no Q
 # Appendix (if time)
 
 _Pulled out of the main flow to protect the 90-min budget; present only if time
-allows or in answer to a question. Six things live here: **daemonless
-validation** (below), **inspecting a layer outside Bazel**, **Experiment 2 · lazy
-push** (needs a remote cache — see the Module 4 note), **why there's no `RUN` to
-run**, the **Dockerfile vs `rules_img` comparison table**, and **"Coming from
-`rules_oci`?"** — the two comparison tables are different slides, so name the one
-you mean._
+allows or in answer to a question. In slide order: **why there's no `RUN` to
+run**, **testing without a daemon** (`docker run` as a test? → cheaper tastes →
+`container_structure_test` → when the image won't run), **looking inside an
+image** (inspecting a layer outside Bazel → or skip the layout), **lazy push**
+(Experiment 2; needs a remote cache, see the Module 4 note), the **Dockerfile vs
+`rules_img` comparison table**, **what "hermetic" still borrowed**, and
+**"Coming from `rules_oci`?"**. The two comparison slides are different, so name
+the one you mean._
 
 **`docker run` as a test?** "A test is a **self-verifying requirement** — the dish
 that checks its own seasoning. (Toyota calls it *autonomation*: build quality in,
@@ -664,14 +658,16 @@ image, `docker run` it, and assert on the output. It works — but you cooked th
 **whole dish** just to taste one bite: slow, daemon-bound, serialized. We want the
 taste test *without* cooking the whole tray every time."
 
-**Daemonless validation.** "Two cheaper tastes before you ever start a container:
-**test the entry script directly** with `py_test` (sandboxed, cached, parallel; no
-image needed), and a quick **negative test** — `docker run --network=none …`
-surfaces undeclared host deps. Handy, but not a proof; the rigorous validator is
-Bazel's sandbox: only *declared* inputs are visible, so a missing ingredient fails
-at build time, every time."
+**Cheaper tastes than a full `docker run`.** *(Was titled "Daemonless validation",
+but its second taste needs a daemon.)* "Two cheaper tastes before you cook the
+whole dish: **test the entry script directly** with `py_test` (sandboxed, cached,
+parallel; no image needed), and a quick **negative test** — `docker run
+--network=none …` surfaces undeclared network deps. Handy, but not a proof; the
+rigorous validator is Bazel's sandbox: only *declared files* are visible, so a
+missing ingredient fails at build time, every time. Host *tools* are the
+exception: that's the 'what hermetic still borrowed' slide."
 
-**Test: `container_structure_test` [Q3]** *(the `test` stage)*. "How do you check an image
+**`container_structure_test` [Q3]** *(the `test` stage)*. "How do you check an image
 is correct without a runtime? `container_structure_test` (GoogleContainerTools —
 a community project, not an official Google product) with
 `driver = "tar"` inspects the image's **files and config directly in the Bazel
@@ -684,6 +680,44 @@ parallel." (On screen: `../samples/python/image_test.yaml`.)
 > validation of files + entrypoint metadata. Then break the entrypoint in
 > `BUILD.bazel` and re-run to watch the metadata test fail in the sandbox (no
 > container ever started).
+
+**When the image won't run.** *(New in the 2026-09-09 review pass, answering
+"how would you inspect the contents if the generated image is broken?". Moved
+from the end of Module 2 to the appendix in the 2026-10-02 pass: the in-room
+Lab 2 never stacks an apt layer on a distro base, so nobody hits `mergedusr`
+there, and its real point is the blind spot of the structure test on the slide
+before. Reach for it when someone asks "what can `container_structure_test`
+actually test?". The failure is **Level 2's ★ Stretch B** (`mergedusr = False`
+on purpose); the repo ships `mergedusr = True`, so say that, or people will
+think the lab is broken.)*
+"This is the module's one war story, and it is the sharpest gotcha in the repo
+because it fails **silently**. Debian's `.deb`s still ship files under `/lib`;
+a real distro base has `/lib` as a **symlink into `/usr`**. Layer a real
+directory over that symlink and it doesn't merge — it **replaces** it, which
+amputates the base's `/usr/lib`. Every binary in the image then fails to exec,
+and the error you get is the world's least helpful: `no such file or directory`
+about a file that is plainly right there. `mergedusr = True` rewrites
+`./lib -> ./usr/lib` so the layers compose. (`//samples/distroless` deliberately
+does *not* set it: on `scratch` there is no `/usr` symlink to clobber, and the
+ELF interpreter has to stay at `/lib64`.)"
+
+*(The **real** lesson, and the reason this slide exists: our
+`container_structure_test` was **green** on those images. It `lstat`s paths in an
+unpacked tar — it never **execs** anything. So it happily certified an image that
+could not run a single binary. That sentence is lifted from
+`.github/workflows/labs.yml`, where a `docker run` smoke job now covers the gap.
+Say it plainly: a green structure test proves the *files* are there, not that the
+**loader** can find them. This is also the shortest honest answer to "what can
+`container_structure_test` actually test?" — TASK §12 wanted a whole slide for
+that; this clause does the load-bearing part.)*
+
+*(Then the two probes, both daemonless, both needing nothing installed:
+`tar tf bazel-bin/labs/level2_ghost/app_layer.tar` answers "what is actually in
+this layer?" — the repo already does exactly this in
+`labs/level1_buildtime/layer_test.py` — and `bazel run //labs:explain -- level2`
+decodes the structure test's bare `FAIL` into the check that failed. Do **not**
+mention sparse layouts or lazy pulls here; the next two slides ("Inspecting a
+layer outside Bazel", "Or skip the layout entirely") are where they live.)*
 
 **Inspecting a layer outside Bazel.** *(New in the 2026-09-09 review pass,
 answering "how can I use any tool to inspect the layer outside Bazel, and how do
@@ -731,8 +765,8 @@ the distroless beat, so Module 2's argument still holds without it. Reach for th
 when someone asks "but where did `RUN` go?", which they reliably do.)*
 "We already replaced `RUN apt-get` back in Module 1 — `apt.install` plus
 `layer_from_tar`. What I skipped was *why* it had to move, and it isn't stylistic.
-**Bazel sandboxes every build action, with no network.** There is no `RUN` to run
-because nothing may reach out mid-build; deps resolve in the **loading** phase
+**A build action shouldn't need the network.** There is no `RUN` to run because
+an action isn't supposed to reach out mid-build; deps resolve in the **loading** phase
 instead, and a **lockfile** pins exactly which bytes. The consequence is the
 interesting part: the packages stop being a *step* and become **artifacts** —
 ordinary content-addressed layers, same inputs → same digest. Which is the only
@@ -741,6 +775,27 @@ image with no base becomes possible. That's the whole trade — give up running
 commands at build time, get reproducible bytes you can cache, dedupe, and ship."
 *(Do **not** re-show `apt.install` here; Module 1's `RUN apt-get` slide already
 has the code. This slide is the why.)*
+*(Precision, because someone will check: Bazel's sandbox **allows** network by
+default (`--sandbox_default_allow_network` is `true`, and this repo doesn't change
+it). So say "shouldn't", not "can't". `--nosandbox_default_allow_network` is the
+flag that makes it a rule.)*
+
+**What "hermetic" still borrowed from the laptop.** *(New in the 2026-10-02
+pass. Sits right after "Same artifact, two philosophies", whose table says
+"Hermetic build: Yes"; this is the honest footnote to that row. Reach for it
+when someone asks "is it *really* hermetic?", or right after an attendee hit
+the compiler error during setup.)*
+"Bazel decides what an action may **see**. It doesn't stop a rule from **using**
+a tool that happens to be on your machine. Building this workshop turned up
+five. The one that bites: `rules_distroless` builds `gawk` from source to write
+`/var/lib/dpkg/status`, the file that lets scanners and `dpkg -l` see the apt
+packages, and it compiles it with whatever C compiler it finds. No compiler, no
+apt layers; a different gcc on a remote worker, and RBE rejects the action. The
+fix ships opt-in: `--config=hermetic-cc`, a pinned zig cc, same image digest.
+`python3` we fixed outright: the digest diff is now a `py_binary`. `bash` we
+accept. Docker and `dot` are on purpose, they're the runtime and the renderer."
+Close on the line that generalises: "remote execution, or a machine with
+nothing installed, is how you find the rest."
 
 **Coming from `rules_oci`? (the last appendix slide.)** *(New in the 2026-09-09
 review pass, answering "the slides don't explain what is a `rules_img`-only

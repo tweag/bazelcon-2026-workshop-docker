@@ -5,6 +5,27 @@
 Dockerfile. Translate `FROM` and `ENTRYPOINT` into `image_manifest` attributes,
 and replace `RUN apt-get install graphviz` with a pinned `dot` layer.
 
+**The before**, from [`samples/python/Dockerfile`](../../samples/python/Dockerfile):
+
+```dockerfile
+FROM python:3.12-slim-bookworm
+
+# System dep: `dot` binary — non-hermetic.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends graphviz \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps.
+COPY requirements_lock.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# App source — edits bust the layers below.
+WORKDIR /app
+COPY app.py /app/app.py
+
+ENTRYPOINT ["python", "/app/app.py", "--render", "/tmp/supply_chain.png"]
+```
+
 **Deck concepts:** the whole translation (Module 1) · a base is a digest, not a
 tag · the system dep becomes pinned bytes · the entrypoint is a launcher ·
 daemonless validation.

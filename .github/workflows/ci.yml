@@ -72,6 +72,54 @@ jobs:
           test -n "$a"
           test "$a" = "$b"
 
+  # The no-install path for attendees without gcc/clang (README "Prerequisites").
+  # Only the apt-layer targets compile C (rules_distroless builds `gawk`), and
+  # --config=hermetic-cc swaps the autodetected host compiler for a pinned zig cc.
+  # The config also turns autodetection off, so a pass here can't be the runner's
+  # gcc quietly doing the work. And the switch must not change the images: the
+  # compiler only builds a tool, so the digest has to match the default build's.
+  no-compiler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Make room on the runner
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/share/swift
+          echo "build --disk_cache=" >> ~/.bazelrc
+          df -h /
+
+      - name: Every apt-layer image builds and tests with no host compiler
+        run: |
+          bazel test --config=hermetic-cc //samples/distroless/... \
+            //labs/level0_graphviz/solution/... //labs/level2_ghost/solution/... \
+            //labs/level3_hardware/solution/... --test_output=errors
+
+      - name: gawk is compiled by zig, not by a host gcc
+        run: |
+          bazel aquery --config=hermetic-cc \
+            'mnemonic("CppCompile", deps(//samples/distroless:image))' \
+            | grep "Command Line" | tee /tmp/cc.txt | head -3
+          test -s /tmp/cc.txt
+          ! grep -v hermetic_cc_toolchain /tmp/cc.txt
+
+      # The image is built under a platform transition, so its outputs live in a
+      # bazel-out/…-ST-… dir, not under bazel-bin/; ask cquery where.
+      - name: Same image digest with either compiler
+        run: |
+          digest() {
+            bazel build "$@" //samples/distroless:image --output_groups=digest
+            cat "$(bazel cquery "$@" //samples/distroless:image \
+                     --output_groups=digest --output=files)"
+          }
+          a=$(digest --config=hermetic-cc)
+          b=$(digest)
+          echo "hermetic-cc=$a"
+          echo "host cc    =$b"
+          test -n "$a"
+          test "$a" = "$b"
+
   # The local-infrastructure labs (labs/remote/README.md). Neither of these paths had
   # any test coverage before: the registry was a docs-only workflow, and the
   # remote-cache material pointed at a hosted service nobody could run in CI.

@@ -141,3 +141,7 @@ diff labs/level4_shared/BUILD.bazel labs/level4_shared/solution/BUILD.bazel
   `RunfilesGroupInfo` protocol, and how a `*_binary` rule can provide it
 - [`samples/shared_layers`](../../samples/shared_layers/): the same idea, with a
   hand-made common layer
+- [aspect_rules_py](https://github.com/aspect-build/rules_py): its `py_image_layer`
+  also splits a binary into interpreter / packages / app tars. This lab builds the
+  split from the protocol underneath. Its tar paths include each binary's own
+  `.runfiles` folder, so compare how much two services share with each approach.

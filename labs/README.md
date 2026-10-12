@@ -8,7 +8,7 @@ done.
 
 | Lab | Goal | Start with |
 |---|---|---|
-| [**Level 0 · Dockerfile → rules_img**](level0_graphviz/) | rebuild the deck's graphviz app without a Dockerfile | `bazel test //labs/level0_graphviz:image_structure_test` |
+| [**Level 0 · Dockerfile → rules_img**](level0_graphviz/) | rebuild the deck's graphviz app ([Dockerfile](../samples/python/Dockerfile)) without a Dockerfile | `bazel test //labs/level0_graphviz:image_structure_test` |
 | [**Level 1 · Build-Time Trap**](level1_buildtime/) | ship a compiled wheel (`cryptography`) with no compiler running | `bazel test //labs/level1_buildtime:app_test` |
 | [**Level 2 · Ghost**](level2_ghost/) | make the `tesseract` binary pip never installs into a pinned layer | `bazel test //labs/level2_ghost:image_structure_test` |
 | [**Level 3 · Hardware Wall**](level3_hardware/) | give an OpenCL app a CPU device (POCL); see why GPUs stay a runtime contract | `bazel test //labs/level3_hardware:image_structure_test` |
@@ -20,6 +20,11 @@ done.
 
 - **Bazel** via [Bazelisk](https://github.com/bazelbuild/bazelisk). The version is
   pinned in `.bazelversion`.
+- **A C compiler** (`build-essential` / `xcode-select --install`) for Levels 0,
+  2 and 3, whose apt layers build a small tool from source. No compiler? Add
+  `--config=hermetic-cc` to every command (or once:
+  `echo "common --config=hermetic-cc" >> .bazelrc.user`) and Bazel brings its
+  own. See the main [README](../README.md#no-c-compiler).
 - **Docker** is only needed for the ★ stretch tasks that `docker run` an image.
   Everything else is daemonless.
 - **The first run takes ~15 minutes and ~600 MB of downloads** (the Python

@@ -64,36 +64,57 @@ A **Lab** in every module ＋ an **Appendix** for the backup material.
 </div>
 
 ---
+layout: two-cols-header
+layoutClass: gap-6 lab-card
+---
 
-# The lab card
+# Grab your fork: the lab card
 
-Every command on these slides is a real target in one repo. **Clone it now** —
-each module's Lab picks up from the block with its number.
+Every module ends on a **Lab** slide: the problem, the commands, and what "done" looks like. First, **fork** [tweag/bazelcon-2026-workshop-docker-build](https://github.com/tweag/bazelcon-2026-workshop-docker-build) and keep it **public**: you work in your fork either way. Then pick one way in, **now**.
+
+::left::
+
+### <span class="verb-glyph"><ph-laptop /></span> On your laptop
+
+Needs [Bazelisk](https://github.com/bazelbuild/bazelisk), [`gh`](https://cli.github.com) (after `gh auth login`) and a C compiler. No compiler? Add `--config=hermetic-cc` and Bazel brings its own. Docker is optional.
 
 ```bash
-# 0 · clone, then build the images (skips the Node toolchain the deck needs)
-git clone https://github.com/tweag/bazelcon-2026-workshop-docker-build
-cd bazelcon-2026-workshop-docker-build && bazel build //samples/...
-
-# 1 · the rules_img image, then the Dockerfile baseline for contrast
-bazel run //samples/python:image_load && docker run --rm bwb/python-graphviz
-docker build -t before samples/python && docker run --rm before
-
-# 2 · the hermetic `dot` layer on scratch, and the dedup proof
-bazel run //samples/distroless:image_load && docker run --rm bwb/distroless
-bazel run //samples/shared_layers:digests
-
-# 3 · push, with zero infra (anonymous registry, 1-hour TTL)
-bazel run //samples/python:push_eager
-
-# A · validate the image with no daemon running at all
-bazel test //samples/python:image_structure_test
+gh repo fork tweag/bazelcon-2026-workshop-docker-build \
+    --clone -- --single-branch && \
+cd bazelcon-2026-workshop-docker-build && \
+bazel test //samples/... //labs/... //tools/...
 ```
 
-<div class="mt-3 opacity-70 text-sm text-center">
+No `gh`? Fork on github.com, then `git clone --single-branch --branch main` your fork's URL.
+
+<div class="lab-stuck">
+
+Start it **before we begin**: ~15 min and ~600 MB, once. Bazel fetches its own pinned interpreter, wheels and `.deb`s.
+
+</div>
+
+<div class="lab-stuck">
 
 <!-- IMAGE: slides/images/repo-qr.png — QR for the repo URL, to sit left of this line -->
-Take-home: `bazel run //labs:progress` — build-time · the ghost · hardware.
+Want more? Every level in `labs/` has ★ stretch tasks: `bazel run //labs:progress` points to each one.
+
+</div>
+
+::right::
+
+### <span class="verb-glyph"><ph-browser /></span> Nothing to install
+
+GitHub Actions runs Bazel and Docker for you.
+
+1. Keep your fork **public**, so Actions minutes are free.
+2. In the fork's **Actions** tab, *enable workflows*.
+3. Press <kbd>.</kbd> on the fork to open the web editor.
+4. Edit a lab, commit to a **new branch**, and open a **PR into your fork's `main`**.
+5. Open **Actions → labs → Summary** for a per-task table, with why anything red is red.
+
+<div class="lab-stuck">
+
+PR into **your fork**, not upstream (upstream runs the maintainers' checks). Full guide: `labs/README.md`.
 
 </div>
 
@@ -287,6 +308,40 @@ steps — Bazel assembles the dish from those inputs, **reproducibly** and at sc
 </div>
 
 ---
+class: lab-slide
+---
+
+<div class="step-kicker opacity-55">lab 0 · 4 min</div>
+
+# Lab 0 · Stock the kitchen
+
+**The problem.** You can't cook without the ingredients. The first build fetches
+a pinned Python interpreter, the wheels and 162 `.deb`s, all checked by sha256.
+That's the slow part, so **start it now** and let it run while we talk.
+
+```bash
+gh repo fork tweag/bazelcon-2026-workshop-docker-build \
+    --clone -- --single-branch
+cd bazelcon-2026-workshop-docker-build
+bazel test //samples/... //labs/... //tools/...   # the lab card's setup; not //...
+
+bazel test //samples/... //labs/... //tools/...   # again: nothing left to do
+bazel build //slides:build                        # optional: this deck, same graph
+```
+
+<div class="lab-done">
+
+✅ **You're done when** the second run takes seconds and every test reads `(cached) PASSED`.
+
+</div>
+
+<div class="lab-stuck">
+
+Slow wifi? Leave it running and follow along on screen. An error naming `gawk`, `cc` or `cpp:toolchain_type` means no C compiler: re-run with `--config=hermetic-cc`.
+
+</div>
+
+---
 layout: section
 ---
 
@@ -385,7 +440,7 @@ Four directives, one at a time — imperative **steps that run** become declarat
 <div class="code-sm">
 
 ```docker
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-bookworm@sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af4d5e1e5bd771208dba74bf
 ```
 
 <div class="xlate-arrow leading-none my-1">↓</div>
@@ -642,6 +697,41 @@ and it grows with image size and dependency count.
 </div>
 
 ---
+class: lab-slide
+---
+
+<div class="step-kicker opacity-55">lab 1 · 6 min</div>
+
+# Lab 1 · Where did `dot` go?
+
+**The problem.** Same app, two builds. The Dockerfile hides graphviz inside a
+`RUN apt-get`. The `rules_img` image hides nothing, so it holds only what we
+declared. Run both and see what each one really contains.
+
+```bash
+# the declarative image: built by Bazel, loaded, run
+bazel run //samples/python:image_load && docker run --rm bwb/python-graphviz
+
+# the Dockerfile baseline, for contrast
+docker build -t before samples/python && docker run --rm before
+
+# the per-edit "Docker tax", measured on your machine
+bazel run //benchmark/pytest_tax:compare
+```
+
+<div class="lab-done">
+
+✅ **You're done when** the Bazel image prints DOT but reports `dot not found`, the Dockerfile image renders the PNG, and you've seen the ratio of `bazel test` to `docker build` time per edit.
+
+</div>
+
+<div class="lab-stuck">
+
+That `dot not found` is the point: the system dep was never declared. We make it a hermetic, pinned layer in Module 2.
+
+</div>
+
+---
 layout: section
 ---
 
@@ -692,8 +782,8 @@ is left that needs an OS underneath it:
 <div class="mt-2 opacity-80 text-sm">
 
 Read it for what **isn't** there: no `base`, so `platform` has to be spelled out;
-no shell, no package manager, no apt database — nothing to exploit but the binary
-itself. The `dot` from Module 0, now a **hermetic, pinned** layer on `scratch`.
+no shell, no package manager — just the binary and the dpkg status file that
+scanners read. The `dot` from Module 0, now a **hermetic, pinned** layer on `scratch`.
 
 </div>
 
@@ -733,57 +823,39 @@ bazel run \
 Any **byte-identical** layer dedupes automatically — prep once, plate twice.
 
 ---
-layout: two-cols-header
-layoutClass: gap-x-6 gap-y-3 !grid-cols-[3fr_2fr]
+class: lab-slide
 ---
 
-# Lab: When the image won't run
+<div class="step-kicker opacity-55">lab 2 · 10 min</div>
 
-The layers composed, the tests were green — and it still dies on `docker run`.
-Two probes, neither of which needs a daemon.
+# Lab 2 · Prep once, plate twice
 
-::left::
-
-### The one that fails silently
-
-<div class="code-sm">
-
-```console
-$ bazel test //labs/level2_ghost:image_structure_test
-PASSED
-$ docker run --rm bwb/level2-ghost
-exec /app/app: no such file or directory
-```
-
-<<< ../MODULE.bazel#mergedusr python
-
-</div>
-
-::right::
-
-### Look inside without running it
-
-<div class="code-sm">
+**The problem.** Lab 1 left `dot` missing, and a one-pot bake would re-cook
+everything on every edit. Put the system dep in its own pinned layer, then
+prove that unchanged layers are reused and never rebuilt.
 
 ```bash
-# 1 · what is actually in this layer?
-bazel build //labs/level2_ghost:app_layer
-tar tf bazel-bin/labs/level2_ghost/app_layer.tar
+# 1 · catering line: edit one line in samples/python/app.py, then
+bazel build //samples/python:image         # only the app layer re-runs
 
-# 2 · why is a test red? decode the
-#     structure test's bare FAIL
-bazel run //labs:explain -- level2
+# 2 · the hermetic `dot`, on scratch, with no RUN and no apt at build time
+bazel run //samples/distroless:image_load && docker run --rm bwb/distroless
+
+# 3 · two services, one shared blob
+bazel run //samples/shared_layers:digests
 ```
+
+<div class="lab-done">
+
+✅ **You're done when** the rebuild touches only the app layer, `dot` runs from the distroless image, and `:digests` lists the layers both images **share**.
 
 </div>
 
-The structure test `lstat`s paths in an unpacked tar — it never **execs**
-anything, so it passes happily on an image that cannot run a single binary.
+<div class="lab-stuck">
 
-::bottom::
+Finished early? `bazel run //labs:progress` → **Level 2 · the ghost**, ★ Stretch B: the image that passes its test and still won't run (appendix).
 
-<div class="opacity-70 text-sm text-center">A green test proves the <em>files</em> are there — not that the <strong>loader</strong> can find them. Stranger still outside Bazel: Module 4, appendix.</div>
-
+</div>
 
 ---
 layout: section
@@ -885,6 +957,40 @@ cache.
 </div>
 
 ---
+class: lab-slide
+---
+
+<div class="step-kicker opacity-55">lab 3 · 8 min</div>
+
+# Lab 3 · Ship it, then ship it again
+
+**The problem.** A registry is the shared pantry. Push with no daemon and no
+login, then push again and watch Module 2's dedup turn into bandwidth you
+don't spend.
+
+```bash
+# zero infra: ttl.sh is anonymous and write-open (1-hour TTL)
+bazel run //samples/python:push_eager      # → ttl.sh/bwb-graphviz:1h
+bazel run //samples/python:push_eager      # again: blobs already there → skipped
+
+# or keep it on your machine
+bazel run //tools:local_registry           # OCI registry on localhost:5000
+bazel run //samples/python:push            # edit app.py, push again
+```
+
+<div class="lab-done">
+
+✅ **You're done when** the second push skips the blobs the registry already has, and after an `app.py` edit only the app blob goes up.
+
+</div>
+
+<div class="lab-stuck">
+
+No network for `ttl.sh`? Use the local registry. With no Docker daemon it falls back to a pinned `crane`, so it still works.
+
+</div>
+
+---
 layout: section
 ---
 
@@ -974,6 +1080,38 @@ Content-addressing is what makes that *safe*: same digest ⇒ same bytes, so nob
 </div>
 
 ---
+class: lab-slide
+---
+
+<div class="step-kicker opacity-55">lab 4 · take-home · labs/remote/README.md</div>
+
+# Lab 4 · The pantry, on your laptop
+
+**The problem.** In the room, "one pantry for the whole chain" is only a
+picture. Run a real remote cache on your machine, throw away every local
+output, and watch the build do almost no work.
+
+```bash
+bazel run //tools:local_cache                                   # REAPI cache on localhost:9092
+bazel clean && bazel build --config=local-cache //samples/...   # cold: uploads
+bazel clean && bazel build --config=local-cache //samples/...   # warm: downloads
+
+bazel run //labs:progress                                       # then: the Flow ladder
+```
+
+<div class="lab-done">
+
+✅ **You're done when** the warm build reports a `remote cache hit` for nearly every process, right after a `bazel clean`.
+
+</div>
+
+<div class="lab-stuck">
+
+Next in `labs/remote/README.md`: a local OCI registry, lazy push, remote execution, and `--config=local-bwb` (82 MB of image on disk → 742 KB).
+
+</div>
+
+---
 layout: center
 class: text-center
 ---
@@ -1031,7 +1169,7 @@ layout: section
 ---
 
 # Appendix
-<div class="opacity-60">If time / backup · two Dockerfile habits · validating without a daemon · looking at an image outside Bazel · two comparison tables</div>
+<div class="opacity-60">If time / backup · why no <code>RUN</code> · testing without a daemon · looking inside an image · lazy push · what hermetic still borrows · coming from <code>rules_oci</code></div>
 
 <!-- IMAGE (divider motif, small/corner): slides/images/divider-tasting-spoon.png — a chef tasting from a spoon (quality check) -->
 
@@ -1045,10 +1183,11 @@ We already replaced `RUN apt-get` with `apt.install` + `layer_from_tar`. Here's
 <div class="grid grid-cols-2 gap-8 mt-5">
 <div>
 
-### Build actions have no network
-Bazel sandboxes every action. There is no `RUN` to run, because nothing may
-reach out mid-build. Deps resolve in the **loading** phase instead, and a
-**lockfile** pins exactly which bytes.
+### Build actions shouldn't need the network
+There is no `RUN` to run, because an action isn't *supposed* to reach out
+mid-build. Deps resolve in the **loading** phase instead, and a **lockfile**
+pins exactly which bytes. To make Bazel enforce it:
+<span class="whitespace-nowrap">`--nosandbox_default_allow_network`</span>.
 
 </div>
 <div>
@@ -1099,19 +1238,20 @@ We want the taste test **without** cooking the whole tray every time.
 
 ---
 
-# Daemonless validation
+# Cheaper tastes than a full `docker run`
 
-Two cheaper tastes, before you ever start a container:
+Two cheaper tastes, before you cook the whole dish:
 
 - **Test the entry script directly** — `py_test` runs the payload sandboxed,
   cached, and in parallel; no image needed.
 - **A quick negative test** — `docker run --network=none …` surfaces undeclared
-  host deps. Handy, but not a proof; the **sandbox** is.
+  network deps. Handy, but not a proof; the **sandbox** is.
 
 <div class="mt-6 opacity-80">
 
-The rigorous validator is Bazel's sandbox: only *declared* inputs are visible, so
-a missing ingredient fails at build time — every time.
+The rigorous validator is Bazel's sandbox: only *declared* files are visible
+(host tools aside: see the last table), so a missing ingredient fails at build
+time — every time.
 
 </div>
 
@@ -1119,7 +1259,7 @@ a missing ingredient fails at build time — every time.
 
 <div class="step-kicker opacity-55">test</div>
 
-# Test: `container_structure_test`
+# `container_structure_test`
 
 **Validate without a daemon.** With `driver = "tar"` it inspects the image's
 **files and config in the Bazel sandbox** — no runtime — and fans out in parallel.
@@ -1131,6 +1271,60 @@ a missing ingredient fails at build time — every time.
 container_structure_test(name = "image_structure_test",
     image = ":image.tar", configs = ["image_test.yaml"], driver = "tar")
 ```
+
+---
+layout: two-cols-header
+layoutClass: gap-x-6 gap-y-3 !grid-cols-[3fr_2fr]
+---
+
+<div class="step-kicker opacity-55">test</div>
+
+# When the image won't run
+
+The test's blind spot, from Level 2's ★ Stretch B (`mergedusr = False`): the test
+stays green and the container still dies.
+
+::left::
+
+### The one that fails silently
+
+<div class="code-sm">
+
+```console
+$ bazel test //labs/level2_ghost:image_structure_test
+PASSED
+$ docker run --rm bwb/level2-ghost
+exec /app/app: no such file or directory
+```
+
+<<< ../MODULE.bazel#mergedusr python
+
+</div>
+
+::right::
+
+### Look inside without running it
+
+<div class="code-sm">
+
+```bash
+# 1 · what is actually in this layer?
+bazel build //labs/level2_ghost:app_layer
+tar tf bazel-bin/labs/level2_ghost/app_layer.tar
+
+# 2 · why is a test red? decode the
+#     structure test's bare FAIL
+bazel run //labs:explain -- level2
+```
+
+</div>
+
+The structure test `lstat`s paths in an unpacked tar — it never **execs**
+anything, so it passes happily on an image that cannot run a single binary.
+
+::bottom::
+
+<div class="opacity-70 text-sm text-center">A green test proves the <em>files</em> are there, not that the <strong>loader</strong> can find them.</div>
 
 ---
 
@@ -1148,7 +1342,11 @@ bazel-bin/samples/python/image_sparse_oci_layout/
 
 **Ask for a real one.** `image.oci` is spec-compliant; `image.oci.tar` is the same layout, packed.
 
-<<< ../samples/python/BUILD.bazel#oci_layout python {*}{maxHeight:'205px'}
+<div class="code-sm">
+
+<<< ../samples/python/BUILD.bazel#oci_layout python
+
+</div>
 
 ---
 
@@ -1167,7 +1365,7 @@ bazel run //tools:crane_cli -- \
 ```
 
 `crane export` flattens every layer into one tar — **8692 paths**, and no
-`bin/dot`. The ghost from Module 2, proven without ever starting a container.
+`bin/dot`. Lab 1's missing `dot`, proven without ever starting a container.
 
 Worth skipping: even a real `image.oci` is mostly **symlinks** into the execroot —
 `du -sh` reads **12K** where the content is **78M**, so materializing it means
@@ -1184,9 +1382,11 @@ all, taking `image.tar` from **82 MB** to **742 KB**.
 
 ---
 
-# Experiment 2 · lazy push — with a remote cache
+<div class="step-kicker opacity-55">push · experiment 2</div>
 
-Now that we have the cache: **lazy** push (`strategy = "lazy"`) skips the runfiles
+# Lazy push, straight from a remote cache
+
+With a remote cache (Module 4), **lazy** push (`strategy = "lazy"`) skips the runfiles
 and streams blobs **straight from the remote cache** to the registry — the win
 when images are huge or numerous.
 
@@ -1200,7 +1400,7 @@ bazel run --config=local-bwb \
 - **Needs a remote cache — not remote execution.** `img` speaks REAPI ByteStream
   straight to the CAS. `//tools:local_cache` is a pinned static binary, so you can
   run this in this room.
-- **Credential-free:** local cache + local registry means nothing needs auth. With
+- **Credential-free:** a local cache + `ttl.sh` means nothing needs a login. With
   a hosted cache, keep pushing to `ttl.sh` so only the *cache* does. A CI-friendly
   *push-at-build-time* variant exists too.
 
@@ -1217,17 +1417,42 @@ Rule of thumb: **eager** for laptops/small images · **lazy** once you have a ca
 | Feature | Dockerfile | Bazel + `rules_img` |
 |---|---|---|
 | **Execution** | Imperative | Declarative |
-| **Hermetic build** | No | Yes |
+| **Hermetic build** | No | Yes (see next slide) |
 | **Daemon req.** | Yes | No |
-| **Layer tar** | Re-tarred per build | Built once, kept in CAS |
+| **Layer tar** | Re-tarred whenever a step reruns | Built once, kept in CAS |
 | **Layer dedup** | Coarse | Content-addressed |
 
 <div class="text-sm mt-3">
 
-**Measured, not asserted** — every row is exercised by a real target in this repo:
+**Measured, not asserted** — every measurable row is exercised by a real target in this repo:
 `//samples/shared_layers:digests`, the daemonless push, the `tar`-driver test.
 Reproducible digests assume the usual controls (zeroed timestamps, stable ordering,
 pinned compression); the *runtime* still depends on the host kernel.
+
+</div>
+
+---
+class: hidden-reqs
+---
+
+# What "hermetic" still borrowed from the laptop
+
+Bazel decides what an action may **see**. It doesn't stop a rule from **using** a
+tool that happens to be on the host. Building this workshop turned up five:
+
+| Hidden requirement | Who needs it | How it showed up | Now |
+|---|---|---|---|
+| **A C compiler**, to build `gawk` | every apt layer: distroless, Levels 0 · 2 · 3 | setup fails with no compiler; RBE fails on a different gcc | `--config=hermetic-cc` (zig, pinned) |
+| **`python3`** | `//samples/shared_layers:digests` | worked on every laptop, by luck | fixed: a `py_binary` on the pinned interpreter |
+| **`bash`** | every `sh_binary` | never: it's on every Linux and macOS box | accepted |
+| **Docker** | the `docker run` steps, the Dockerfile baseline, `//tools:local_rbe` | by design: the runtime half | optional; the registry falls back to a pinned `crane` |
+| **`dot`** | `//tools:render_graph` | by design: it renders for the deck | documented |
+
+<div class="mt-3 text-sm opacity-80">
+
+Remote execution, or a machine with **nothing installed**, is how you find the
+rest. `gawk` only writes `/var/lib/dpkg/status`, so the image digest is the same
+with either compiler.
 
 </div>
 
@@ -1266,6 +1491,6 @@ are genuinely new, and they're all the same idea: **keep the bytes out of the gr
 `registry`＋`repository`; `remote_tags`→`tag_list`).
 **Trade-offs:** `os`/`architecture` follow the Bazel target platform, and
 `exposed_ports`/`volumes` move into `config_fragment`.
-**Interop runs both ways**, so migration can be incremental rather than a cutover.
+**`rules_img` reads and writes OCI layouts**, so migration can be incremental rather than a cutover.
 
 </div>

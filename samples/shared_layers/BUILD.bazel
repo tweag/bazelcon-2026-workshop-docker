@@ -4,7 +4,7 @@ load("@rules_img//img:image.bzl", "image_manifest")
 load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_python//python:defs.bzl", "py_binary")
 
 # Two real-ish services — an `api` and a `worker` — that share layers (workshop
 # Q5). Both sit on the same python_base_img and include the same shared config +
@@ -82,7 +82,18 @@ build_test(
 )
 
 # bazel run //samples/shared_layers:digests → prints the shared layer digests.
-sh_binary(
+# The images are data, so `bazel run` builds them; the diff runs on the pinned
+# interpreter, not the host's python3.
+py_binary(
     name = "digests",
-    srcs = ["digests.sh"],
+    srcs = ["digests.py"],
+    args = [
+        "$(rootpaths :image_api)",
+        "$(rootpaths :image_worker)",
+    ],
+    data = [
+        ":image_api",
+        ":image_worker",
+    ],
+    main = "digests.py",
 )

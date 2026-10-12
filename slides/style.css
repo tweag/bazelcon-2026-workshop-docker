@@ -114,6 +114,11 @@
   background: var(--bc-bg-soft);
 }
 
+/* Code sits on cream even in dark mode — use the light theme's token colours. */
+html.dark .slidev-code span {
+  color: var(--shiki-light) !important;
+}
+
 /* --- Cover slide: a copy of the official BazelCon title card ------------- */
 /* Measured off images/talk-rules-img.jpg (1280x720) and scaled to Slidev's
  * 980x552 canvas: 54px left margin, 44px/1.28 title, 27px byline.
@@ -463,3 +468,40 @@
   line-height: 1.15;
   text-align: center;
 }
+
+/* The lab slide that closes every module: the problem, the commands, and what
+ * "done" looks like. It stays up for the whole lab, so the "done" line is a
+ * callout that reads from the back row. */
+.lab-done {
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.8rem;
+  border-left: 4px solid var(--bc-lime);
+  background: rgba(124, 179, 66, 0.14);
+  font-size: 0.9rem;
+}
+.lab-done p { margin: 0; }
+.lab-done strong { color: var(--bc-forest); }
+.lab-stuck { margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.7; }
+
+/* The lab card carries two ways in side by side (laptop · browser), so it runs
+ * a size smaller than a talk slide; the clone URL must fit one column. */
+.slidev-layout.lab-card .col-left p,
+.slidev-layout.lab-card .col-right p,
+.slidev-layout.lab-card li { font-size: 0.85rem; line-height: 1.5; }
+.slidev-layout.lab-card li { margin: 0.1rem 0; }
+.slidev-layout.lab-card h3 { margin-bottom: 0.3rem; }
+.slidev-layout.lab-card .lab-stuck p { font-size: 0.75rem; }
+.lab-card {
+  --slidev-code-font-size: 0.56rem;  /* .slidev-code sets it !important */
+  --slidev-code-line-height: 1.55;
+}
+/* A flag like `--config=hermetic-cc` must not break after its `--`: people
+ * type these from the screen, and a split flag reads as two words. */
+.lab-card :not(pre) > code,
+.lab-slide :not(pre) > code { white-space: nowrap; }
+
+/* "What hermetic still borrowed": a five-row, four-column table on one slide.
+ * The last column is the answer, so it keeps full strength. */
+.hidden-reqs table { width: 100%; font-size: 0.72rem; line-height: 1.4; }
+.hidden-reqs th, .hidden-reqs td { padding: 0.35rem 0.5rem; vertical-align: top; }
+.hidden-reqs td:nth-child(2), .hidden-reqs td:nth-child(3) { opacity: 0.85; }

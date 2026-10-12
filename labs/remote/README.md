@@ -26,6 +26,7 @@ store so your next build is genuinely cold.
 |---|---|---|
 | 1 | `bazel build --config=local-cache //samples/...` twice, with `bazel clean` in between | the second build reports ~260 remote cache hits (§1) |
 | 2 | `bazel build --config=local-bwb //samples/python:image.tar` | the output on disk is KB instead of MB (§2) |
+| ★ | delete one blob from the cache, then rebuild | you've seen `Lost inputs` and recovered from it three ways (§2 ★) |
 | 3 | `bazel run //samples/python:push`, edit `app.py`, push again | the second push uploads only the changed blobs (§3) |
 | 4 | `bazel run --config=local-bwb ... //samples/python:push_lazy` | 0 blobs come from disk (§3) |
 | 5 | `bazel run //tools:crane_cli -- manifest localhost:5000/bwb/python-graphviz:latest` | you've read a pushed image with no daemon (§3) |
@@ -93,6 +94,74 @@ are never materialised locally unless something actually asks for them.
 Same build, same graph, same result — 110× less local I/O. For container images
 this is the whole game: an image is a set of blobs, and the machine that
 *assembles* it rarely needs to hold them.
+
+### ★ Stretch — when the cache forgets
+
+There's a price for that. Bazel now *remembers* outputs it never downloaded, and
+it trusts the cache to keep them. Real caches evict: by size, by age
+(`--experimental_remote_cache_ttl` defaults to 3h), or because someone purged
+them. If a blob goes missing between the build that skipped it and the action
+that needs it, you get this:
+
+```
+ERROR: .../samples/python/BUILD.bazel:136:11: PushMetadata samples/python/push_lazy.layer_path_hints
+failed: Lost inputs no longer available remotely: samples/python/push_lazy.configuration.json (4ecc1dbc…/84)
+```
+
+That was seen for real in this repo: the 5 GB cap on the disk cache in
+`.bazelrc` evicted the blob in the middle of a `bazel build //...`. You can make
+it happen on purpose. The disk cache is a cache you can reach with `rm`, so no
+server is needed, and `--remote_download_toplevel` gives it the same
+without-the-bytes behaviour as `local-bwb`.
+
+**1. Build without the bytes from a warm cache.** The first build fills the
+cache. After the `bazel clean`, everything comes back from it:
+
+```bash
+bazel build //samples/python:push_lazy
+bazel clean
+bazel build --remote_download_toplevel --execution_log_json_file=/tmp/exec.json \
+  //samples/python:push_lazy
+ls bazel-bin/samples/python/push_lazy.configuration.json     # No such file: it stayed in the cache
+```
+
+**2. Be the eviction.** The execution log has the digest of the file Bazel
+skipped. Delete that blob, and delete the output of the action that reads it,
+so that action has to run again:
+
+```bash
+H=$(grep -A3 '"path": ".*push_lazy.configuration.json"' /tmp/exec.json | grep -o '[0-9a-f]\{64\}' | head -1)
+rm ~/.cache/bazel-disk/cas/${H:0:2}/$H
+rm -f bazel-bin/samples/python/push_lazy.layer_path_hints
+```
+
+**3. Watch it fail.** Bazel normally retries on its own (more on that in
+step 4), so turn that off. `no-cache` makes `PushMetadata` really run. Without
+it, Bazel takes the action's result from the cache and never needs the missing
+input:
+
+```bash
+bazel build --remote_download_toplevel --experimental_remote_cache_eviction_retries=0 \
+  --modify_execution_info=PushMetadata=+no-cache //samples/python:push_lazy
+# ERROR: ... PushMetadata ... failed: Unexpected lost inputs ...
+# ERROR: Build did NOT complete successfully
+```
+
+**4. Recover, three ways.** Repeat steps 1–2 before each one, then run step 3's
+command with one change:
+
+| Change to step 3 | What you see | Cost |
+|---|---|---|
+| drop `--experimental_remote_cache_eviction_retries=0` (the default is 5) | the same `ERROR:`, then `Found transient remote cache error, retrying the build...`, then success | the whole build runs again, and the scary error is still printed |
+| add `--rewind_lost_inputs` | success, no error | Bazel re-runs only the action that produced the lost file. The flag is experimental in Bazel 9.1.1 and missing from `bazel help` |
+| `--remote_download_outputs=all` instead of `--remote_download_toplevel` (in steps 1 and 3) | step 1's `ls` finds the file, and nothing can get lost | every byte is downloaded, so you've given up building without the bytes |
+
+The last row is what this repo's `.bazelrc` does by default, because the disk
+cache cap made the race a real problem for attendees. The `*-bwb` and
+`local-rbe` configs turn it back to `--remote_download_minimal`. With a hosted
+cache, a further option is `--experimental_remote_cache_lease_extension`: it
+asks the server to keep the blobs a running build depends on. It works only if
+the server supports it, and that hasn't been tested with the services in this lab.
 
 ---
 
@@ -201,10 +270,13 @@ both sides of it.
 
 Nothing is broken. Remote execution simply *reported* a non-hermeticity your
 laptop had been quietly covering for — which is the single best argument for
-adopting it. The fix is to register a hermetic C++ toolchain (e.g.
-[`toolchains_llvm`](https://github.com/bazel-contrib/toolchains_llvm)) instead of
-letting Bazel autodetect the host compiler. That is a real dependency decision,
-so this repo leaves it undone on purpose and leaves the failure visible.
+adopting it. The fix is to use a hermetic C++ toolchain instead of letting
+Bazel autodetect the host compiler. This repo ships one, opt-in:
+`--config=hermetic-cc` (a pinned zig cc from
+[`hermetic_cc_toolchain`](https://github.com/uber/hermetic_cc_toolchain); see
+`.bazelrc`). It is off by default on purpose, so the failure above stays visible
+for this lab. The same config is what lets attendees with no compiler build the
+apt layers at all (main [README](../../README.md#no-c-compiler)).
 
 Two targets can never run remotely, by design: `//tools:render_graph` and
 `//tools:local_registry` shell out to the host.

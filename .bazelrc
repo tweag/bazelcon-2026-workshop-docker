@@ -17,6 +17,11 @@ test --test_output=errors
 build --disk_cache=~/.cache/bazel-disk
 # Every image tar lands in it a second time; cap it so it can't eat the laptop.
 build --experimental_disk_cache_gc_max_size=5G
+# Bazel 9 treats disk-cache hits like remote ones: by default it leaves
+# intermediate outputs in the cache instead of writing them to bazel-out. The
+# 5G GC above can then evict one mid-build ("Lost inputs no longer available
+# remotely"). Download everything; the bwb configs below opt back into minimal.
+build --remote_download_outputs=all
 
 # `bazel test //labs/...` would otherwise also build every target the pattern
 # matches, e.g. each image_load's Docker tar (~6 GB that no test reads). They
@@ -30,6 +35,20 @@ build --@rules_img//img/settings:compress=zstd
 
 # Surface this repo's own conventions.
 common --enable_platform_specific_config
+
+# --- No C compiler installed? (--config=hermetic-cc) --------------------------
+# The apt-layer targets (//samples/distroless, labs Levels 0, 2, 3) build `gawk`
+# from source, and by default Bazel uses the host's gcc/clang for that. This
+# config uses a pinned zig cc instead (see MODULE.bazel), so nothing needs to be
+# installed. Turning off autodetection makes sure the host compiler can't leak
+# in. To make it stick:  echo "common --config=hermetic-cc" >> .bazelrc.user
+# It is opt-in, not the default, because labs/remote/README.md §4 is a lesson
+# about exactly the autodetected-toolchain gap that this closes.
+common:hermetic-cc --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+common:hermetic-cc --extra_toolchains=@zig_sdk//toolchain:linux_amd64_gnu.2.28
+common:hermetic-cc --extra_toolchains=@zig_sdk//toolchain:linux_arm64_gnu.2.28
+common:hermetic-cc --extra_toolchains=@zig_sdk//toolchain:darwin_amd64
+common:hermetic-cc --extra_toolchains=@zig_sdk//toolchain:darwin_arm64
 
 # --- Remote cache / remote execution (labs/remote/README.md) ------------------------
 # None of these are on by default: they need an endpoint and an API key, which

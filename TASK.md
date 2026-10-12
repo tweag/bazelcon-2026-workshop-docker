@@ -304,6 +304,38 @@ Instructor: Rafael Lima · Sponsored by Tweag by Modus Create.
      [`slides/style.css`](slides/style.css) → [`docs/building-without-bytes.pdf`](docs/building-without-bytes.pdf)
 3. [x] Runnable samples backing the labs: distroless (§2.11), the "docker tax"
    benchmark (§4.1), and registry push (§2.12).
+   - [x] **Lab N slide closing each module (0–4)** — problem · commands · "you're
+     done when" (`class: lab-slide`, `.lab-done` / `.lab-stuck` in `style.css`).
+     Lab 4 is take-home (`labs/remote/README.md` §1). The lab card is now two ways
+     in: README setup on a laptop, or fork + PR with the `labs` workflow
+     (`.lab-card` in `style.css`). PDF re-exported locally (54 pages); a full
+     one-shot `//slides:export_pdf` crashed Chromium on a low-RAM laptop, so it
+     was exported in four `--range` chunks and joined with `pdfunite`.
+   - [x] **No-compiler path.** Only `@gawk` (built from source by rules_distroless
+     for every apt layer) compiles C, with the autodetected host compiler.
+     Documented as a prerequisite, and `--config=hermetic-cc` (opt-in
+     `hermetic_cc_toolchain` 4.3.0, zig cc, ~54 MB, never fetched by default)
+     builds it with nothing installed. Same image digest either way. Guarded by
+     the `no-compiler` CI job. Kept opt-in so `labs/remote/README.md` §4 still fails.
+   - [x] **Appendix: "What 'hermetic' still borrowed from the laptop"**: the five
+     host requirements found (C compiler for `gawk`, `python3`, `bash`, Docker,
+     `dot`) and what each became. `python3` fixed: `//samples/shared_layers:digests`
+     is now a `py_binary` with the images as data (same output, byte for byte; no
+     second Bazel server or `~/.cache/bazel-shared-layers-ob` output base).
+   - [x] **"When the image won't run" moved to the appendix**, between "Test:
+     `container_structure_test`" and "Inspecting a layer outside Bazel". It was
+     titled "Lab:" just before the real Lab 2, and its reason for sitting in
+     Module 2 ("Lab 2's tasks hit it") is gone: only Level 2 ★ Stretch B triggers
+     `mergedusr`. Also fixed: distroless "no apt database" (the layer ships
+     `/var/lib/dpkg/status`), and "the ghost from Module 2" → Lab 1's missing `dot`.
+   - [x] **Appendix review** (all 12 slides): "no network in a build action" was
+     false by default (`--sandbox_default_allow_network=true`), now "shouldn't" plus
+     the enforcing flag; "Daemonless validation" retitled (its `docker run` bullet
+     needs a daemon); lazy push pushes to `ttl.sh`, not a local registry, and is
+     retitled; `#oci_layout` code no longer overflows; divider subtitle lists the
+     real sections; "Test:" prefix dropped; comparison-table rows softened; interop
+     claim narrowed to what rules_img does. "78M" re-measured and kept: on ZFS,
+     `du -L` shows compressed blocks (44M); the apparent size is 78M.
 4. [x] The deck answers the 5 core how-to questions, each on a named slide:
    - **rules_oci steps** → "rules_oci, start to finish"
    - **rules_img steps** → "rules_img, start to finish"
@@ -1566,3 +1598,148 @@ the fix.
   - [ ] `image_load >/dev/null` hides a rootless/rootful Docker mismatch
     (load into one daemon, `docker run` against the other).
   - [ ] `answers` modes: `--all` and `--changed FILE` are undocumented.
+
+## 19. Expert-audience review — Alex Eagle / Malte lens (2026-10-02)
+
+§18 read the labs as a beginner. This pass reads the deck and labs as a Bazel +
+containers expert, someone like Alex Eagle (Aspect: rules_oci, rules_py,
+rules_distroless) or Malte (rules_img). The question: would they stay engaged?
+
+**Verdict:** they'd enjoy roughly the last third of the deck and the appendix. Today the
+labs offer them nothing *open*, because every task has a known answer in `solution/`.
+Hence the expert stretch tasks below. They're for discussion, not grading.
+
+- **Where they'd go quiet** (by design, the main path is for newcomers):
+  - Modules 0–1 and Levels 0–2 are their own docs read back to them.
+  - Three spots invite pushback:
+    - [ ] **"Coming from `rules_oci`?"**: check every claim against *current* rules_oci,
+      especially "never staged into runfiles" and "eager push is much like rules_oci".
+    - [ ] **"Docker tax"** (0.8 s vs 2.2 s): write down how the Dockerfile baseline was
+      tuned (BuildKit cache mounts, `uv`, layer order) before someone calls it a
+      strawman.
+    - [x] **Level 4 vs `py_image_layer`**: the README now credits aspect_rules_py and
+      points at the sharing difference.
+- **Where they'd lean in:**
+  - the §18 story (a 560 MB layer that was 559 MB unstripped interpreter);
+  - the hidden-host-requirements appendix;
+  - lazy push over ByteStream, shallow pulls, BwoB, local RBE;
+  - the postinst / `mergedusr` traps.
+- **Decisions:**
+  - **No GPU/CUDA content.** It needs specialized hardware and matching drivers. Level 3
+    stays CPU-only.
+  - **rules_python stays; no swap to aspect_rules_py.**
+    - rules_py builds on rules_python's interpreter toolchain anyway.
+    - The main path and Level 4 are built on `py_binary` runfiles.
+    - `py_image_layer`'s per-binary tar paths would break Level 4's sharing.
+    - A swap weeks before the workshop would mean re-testing every lab.
+
+### Expert stretch tasks — validated against the pinned versions, not yet run
+
+Validated by reading the code (Bazel 9.1.1, rules_img 0.3.12, rules_python 2.0.2,
+rules_distroless 0.8.0) plus BCR and GitHub. **Nothing has been built yet; each one
+needs a dry run before it's published.** Ranked by conversation value.
+
+- [ ] **E1 · Multi-arch index** (✅ feasible with caveats, ½–1 day). One `image_index` for
+  amd64 + arm64. Real problem: Apple-silicon laptops and Graviton fleets.
+  - `image_index(platforms=…)` uses a split transition (`rules_img+/img/private/index.bzl:303`).
+    The pulled base already lists arm64.
+  - The apt yamls already lock `archs: [amd64, arm64]`, and the aarch64 stripped
+    interpreter is pinned (`MODULE.bazel:113`).
+  - `gawk` is `cfg="exec"`, so no cross C compiler is needed.
+  - `tar`-driver structure tests run fine on amd64.
+  - Missing: `target_platforms = ["linux_x86_64", "linux_aarch64"]` on the `labs_pypi`
+    `pip.parse` (wheel selection is host-only today), plus `platform()` targets.
+  - Cost: every layer is built twice, which presses on the 5 GB disk-cache cap.
+    *Running* arm64 needs qemu, so it's out of scope.
+- [ ] **E3 · Stamp, sign, attest without killing the cache** (✅ caveats, 1½–2 h).
+  Real problem: supply-chain requirements (SLSA).
+  - rules_img `stamp` + Go templates cover labels, annotations and env
+    (`manifest.bzl:428`) and push tags (`push.bzl:70`). Layers never change.
+  - **Trap:** a global `--stamp` also stamps every `py_binary` (`stamp=-1`), so the app
+    layer changes every commit. Answer: `stamp="force"` on `image_push` only, with a
+    `{{.STABLE_GIT_SHA}}` tag.
+  - There's no workspace_status script yet.
+  - **SBOM:** no ruleset emits one. The apt `*.lock.json` and `requirements_lock.txt`
+    have every field needed (a stdlib converter of ~60–80 lines). rules_img can attach
+    the SBOM as an OCI referrer (`subject` / `artifact_type` / `referrers`); support in
+    crane serve is unverified.
+  - **cosign:** pin v2.6.1 via `http_file` and use a local key with `--tlog-upload=false
+    --allow-insecure-registry`. v3 may also need `--use-signing-config=false`. Sign the
+    `digest` output group of `image_manifest`, because push returns no digest.
+- [ ] **E5 · Level 4 with aspect_rules_py** (✅ caveats, 2–4 h). Real question: do I need a
+  custom rule at all?
+  - Use rules_py **1.12.1**: 2.0.0-alpha rejects rules_python's `py_binary`. It forces no
+    version bumps.
+  - Risk: it registers its own 3.13 interpreters, so check with cquery that 3.12 still
+    wins.
+  - Output is three plain bsdtar tars (gzip). Wrap them in `layer_from_tar(optimize=True)`.
+  - **Expected: `shared_layers_test` stays red.** The tar paths embed `api.runfiles/`
+    vs `worker.runfiles/`, while `layer_from_binary` uses `/app/.shared_runfiles/`.
+    That contrast is the lesson. The macro is marked EXPERIMENTAL.
+- [ ] **E2 · Base-image CVE bump** (✅, ½ day). Real problem: weekly patching across N
+  services.
+  - The digest is pinned once (`MODULE.bazel:186`); the `#base_pull` transclusion must
+    stay 10 lines.
+  - **Gotcha:** re-locking apt changes nothing. The yamls pin a Debian snapshot
+    (`20240210T223313Z`), and bumping that is what brings in CVE fixes.
+  - A base bump leaves app-layer digests unchanged (`digests.py` shows it).
+  - There's no scanner on BCR (only `rules_syft`). Fetch grype by `http_archive`, then
+    choose between a pinned DB (`GRYPE_DB_AUTO_UPDATE=false`, stale) and a
+    `requires-network` test (not hermetic). That trade-off is the conversation.
+  - `crane rebase` is redundant under Bazel; mention it only for comparison.
+- [ ] **E4 · The postinst gap, `ca-certificates` on scratch** (✅, ~1 h).
+  - `dpkg_status.sh` only writes `/var/lib/dpkg/status`.
+  - Level 0 ★ already covers `dot -c`, so use `samples/distroless` instead. The
+    python-slim base already ships a CA bundle, so it can't show the break.
+  - Fix with rules_distroless `cacerts` + `SSL_CERT_FILE`.
+  - Test offline with `fileExistenceTests` and a `py_test` counting `get_ca_certs()`.
+  - Dropped: ldconfig and alternatives, because nothing visibly breaks.
+- [ ] **E6 · Break reproducibility on purpose** (⚠ mostly exists, 1–2 h).
+  - `ci.yml:57-73` already compares builds before and after `bazel clean`;
+    `ci.yml:109-121` already compares host gcc vs `hermetic-cc`.
+  - Reframe as: read those checks, break them (non-zero mtime, a different compression
+    level), explain the diff.
+  - Optional RBE digest leg: needs Docker; the worker is pinned by tag, not digest; add
+    `--remote_download_outputs=toplevel`.
+  - diffoscope needs zstd/libmagic, and `crane export` + `digests.py` cover most of it.
+
+Where they'd live, if they're published: a `labs/expert/README.md` of open problems
+with no tests, framed clearly as *discussion*. That's because "`bazel test` tells you
+when you're done" doesn't hold for them.
+
+### Speaker prep — questions to expect
+
+- **E1:** Is it a transition or a build per arch? How are native wheels for the other arch
+  picked? How do you test arm64 on an amd64 runner? Is the apt lock per arch?
+- **E2:** How many blobs does a base bump push across N services? Who bumps the digest
+  (Renovate on `MODULE.bazel`)? Rebase vs rebuild? Should scanning happen in the build
+  graph or in the registry?
+- **E3:** Does `--stamp` change the digest and kill the cache? Where does signing live,
+  given it needs credentials and isn't hermetic? Which SBOM do you trust: one from lock
+  files or one from the image?
+- **E4:** Which packages break silently? Can a structure test catch it? Should
+  rules_distroless run a safe subset of postinst?
+- **E5:** Same interpreter-layer digest? Does rules_py's venv layout change the entrypoint
+  or `sys.path`? Should rules_python provide `RunfilesGroupInfo` itself?
+- **E6:** What still leaks (timestamps, compiler paths, locale)? Should CI fail on a digest
+  diff between configs?
+- **Deck:** Why rules_img over rules_oci *today*, and can you migrate incrementally (OCI
+  layout in and out)? Is the Docker baseline tuned? What does BwoB cost when a test needs
+  the bytes?
+
+## 20. Lost inputs under the disk cache (2026-10-12)
+
+- [x] **Default builds no longer lose inputs.** `bazel build //...` failed once with
+  `Lost inputs no longer available remotely: samples/python/push_lazy.configuration.json`
+  (it passed on Bazel's automatic retry). Cause: Bazel 9 treats disk-cache hits like
+  remote ones, so with the default `--remote_download_outputs=toplevel` it doesn't write
+  intermediate outputs to `bazel-out`. The 5 GB `--experimental_disk_cache_gc_max_size`
+  then evicted one mid-build. Fix: `build --remote_download_outputs=all` in `.bazelrc`.
+  The `*-bwb` / `local-rbe` configs still set `--remote_download_minimal` after it.
+- [x] **Remote lab ★ "when the cache forgets"** (`labs/remote/README.md` §2): delete
+  the blob by hand, fail with retries=0, recover three ways (retry, `--rewind_lost_inputs`,
+  `=all`). Run end to end on 9.1.1. Two traps found while writing it: `no-remote-cache`
+  does **not** keep the disk cache away (`no-cache` does), and if the cache already lacks
+  the blob, Bazel quietly re-runs the producer instead of failing (hence the warm-up build).
+  - [ ] Not in `labs_ci.py`: STRETCH only holds docker smoke checks for the levels. Add a
+    `remote` leg if this stretch should be guarded against Bazel bumps.
