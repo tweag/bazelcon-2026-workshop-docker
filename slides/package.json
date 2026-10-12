@@ -12,7 +12,7 @@
     "export": "slidev export --per-slide --output ../docs/building-without-bytes.pdf"
   },
   "dependencies": {
-    "@slidev/cli": "^52.16.0",
+    "@slidev/cli": "^52.20.1",
     "@slidev/theme-default": "^0.25.0",
     "playwright-chromium": "^1.63.0",
     "slidev-addon-rabbit": "^0.4.0"
