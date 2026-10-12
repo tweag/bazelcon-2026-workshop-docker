@@ -27,8 +27,8 @@ bazel_dep(name = "aspect_rules_js", version = "3.2.3")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 
 # --- Prebuilt service binaries for the local-infrastructure labs -------------
-# The workshop's registry / remote-cache labs used to need Docker (registry:2)
-# or a hosted account (BuildBuddy). These two pinned static binaries make both
+# The workshop's registry / remote-cache labs would otherwise need Docker
+# (registry:2) or a hosted account (BuildBuddy). These two pinned static binaries make both
 # runnable offline, as ordinary Bazel targets — see labs/remote/README.md.
 #
 # Upgrading: bump the version, then take the new sha256 from the release's

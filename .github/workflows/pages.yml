@@ -23,9 +23,9 @@ concurrency:
 
 jobs:
   build:
-    # Pages can't publish from a private repo on the free tier — skip (and so
-    # skip deploy via `needs`) to avoid red runs on every push while private.
-    if: ${{ github.event.repository.private == false }}
+    # Only the upstream repo publishes. Attendee forks push to `main` too, but
+    # have no Pages site — skip there (and so skip deploy via `needs`).
+    if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

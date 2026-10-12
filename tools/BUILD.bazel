@@ -1,7 +1,15 @@
+load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(default_visibility = ["//visibility:public"])
+
+# The deck transcludes workspace_status.sh#bwb_id; stage it into bazel-bin so the
+# hermetic //slides:build resolves `../tools/...` (mirrors //samples/*:slides_inputs).
+copy_to_bin(
+    name = "slides_inputs",
+    srcs = ["workspace_status.sh"],
+)
 
 # --- Prebuilt service binaries (pinned in MODULE.bazel) ----------------------
 config_setting(

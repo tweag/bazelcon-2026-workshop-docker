@@ -16,7 +16,7 @@ info: |
   by the same Bazel workspace that builds the images they describe; code on
   screen is imported live. Script: slides/content.md.
 class: bazel-cover
-transition: slide-left
+transition: fade
 mdc: true
 addons:
   - slidev-addon-rabbit
@@ -99,9 +99,9 @@ Want more? Every level in `labs/` has ★ stretch tasks: `bazel run //labs:progr
 
 ::right::
 
-### <span class="verb-glyph"><ph-browser /></span> Nothing to install
+### <span class="verb-glyph"><ph-browser /></span> Online editor + CI
 
-GitHub Actions runs Bazel and Docker for you.
+Nothing to install. GitHub Actions runs Bazel and Docker for you.
 
 1. Keep your fork **public**, so Actions minutes are free.
 2. In the fork's **Actions** tab, *enable workflows*.
@@ -458,8 +458,8 @@ base = image("python_base_img")   # samples/python/BUILD.bazel — the consuming
 <div class="mt-3 text-center text-sm">
 
 It names *bytes*, not a tag, and resolves **once when the module graph loads** —
-never again at build time. (`layer_handling = "lazy"` previews Module 4: the
-base's blobs are fetched only when something actually needs them.)
+never again at build time. (`layer_handling = "lazy"` makes it a **lazy pull**:
+the base's blobs are fetched only when something actually needs them.)
 
 </div>
 
@@ -723,7 +723,7 @@ bazel run //benchmark/pytest_tax:compare
 
 <div class="lab-stuck">
 
-That `dot not found` is the point: the system dep was never declared. We make it a hermetic, pinned layer in Module 2.
+That `dot not found` is the point: the system dep was never declared. Next, we make it a hermetic, pinned layer with **`apt.install`**: no `RUN`, no apt at build time.
 
 </div>
 
@@ -779,7 +779,7 @@ is left that needs an OS underneath it:
 
 Read it for what **isn't** there: no `base`, so `platform` has to be spelled out;
 no shell, no package manager — just the binary and the dpkg status file that
-scanners read. The `dot` from Module 0, now a **hermetic, pinned** layer on `scratch`.
+scanners read. The same `dot` that was missing before, now a **hermetic, pinned** layer on `scratch`.
 
 </div>
 
@@ -899,61 +899,131 @@ Docker has four verbs. **We've done the local two** — everything so far was
 
 ---
 
-<div class="step-kicker opacity-55">push</div>
+<div class="step-kicker opacity-55">push · 1 · a local registry</div>
 
-# Push — daemonless, to any registry
+# `image_push`, the minimum
 
-A registry is a **central pantry** keyed by content: push once, and every kitchen
-pulls the exact same ingredient. `rules_img` → `image_push`: no daemon, no socket
-— it talks straight to the registry API.
+<div class="grid grid-cols-2 gap-6 mt-4">
+<div>
 
-<div class="mt-4">
+<div class="code-sm">
 
-**Experiment 1 · zero infra.** `ttl.sh` is an anonymous, write-open registry —
-no daemon, no local registry, no login:
+<<< ../samples/python/BUILD.bazel#push_local python[samples/python/BUILD.bazel]
+
+</div>
+
+</div>
+<div class="text-sm">
+
+A registry is a **central pantry** keyed by content. `image_push` is a **rule**:
+`bazel run` builds a pusher plus a request file that lists every blob by digest,
+then runs it. It talks **straight to the registry API**: no daemon, no socket.
 
 ```bash
-bazel run //samples/python:push_eager   # → ttl.sh/bwb-graphviz:1h (1-hour TTL)
-```
-
-Prefer a local registry? Two targets, same result:
-
-```bash
-bazel run //tools:local_registry        # registry:2 (or crane) on localhost:5000
+bazel run //tools:local_registry
 bazel run //samples/python:push
 ```
 
+```console
+blob transfers: 7 from disk, 0 from disk cache, …
+localhost:5000/bwb/python-graphviz:latest
+```
+
+7 = 5 layers ＋ config ＋ manifest. No `strategy` set → the default, **eager**
+(two slides on).
+
+</div>
 </div>
 
 ---
 
-<div class="step-kicker opacity-55">push</div>
+<div class="step-kicker opacity-55">push · 2 · a shared registry</div>
 
-# Optimizing the push
+# Same rule, a shared registry
 
-Everything from here is about **not moving bytes you don't have to**:
+<div class="grid grid-cols-2 gap-6 mt-4">
+<div>
 
-1. **Only the missing blobs go up.** Module 2's dedup, now spent as
-   **bandwidth** — a shared base layer uploads *once*.
-   Run `push_eager` a second time:
+<div class="code-sm">
 
-   ```bash
-   bazel run //samples/python:push_eager   # blobs already present → skipped
-   ```
+<<< ../samples/python/BUILD.bazel#push_ttl python[samples/python/BUILD.bazel] {5-8}
 
-2. **`strategy = "eager"`** — every blob rides in the push target's **runfiles**,
-   and `bazel run` uploads them. Zero infra, works anywhere. *That's what we just
-   ran.*
+</div>
 
-3. **`strategy = "lazy"`** — the push tool streams blobs **straight from a remote
-   cache**, so nothing is staged into runfiles. It needs infra we haven't met yet
-   → **Module 4**, and it's demoable in the Appendix.
+```bash
+bazel run //samples/python:push_eager
+```
 
-<div class="mt-3 opacity-70 text-sm">
+```console
+ttl.sh/bwb-73557444/graphviz:1h
+```
 
-Rule of thumb: **eager** for laptops and small images · **lazy** once you have a
-cache.
+</div>
+<div class="text-sm">
 
+Only **where to** changed:
+
+- **`ttl.sh`**: anonymous, write-open, no login. The tag `1h` *is* the lifetime.
+- **`{{.STABLE_BWB_ID}}`** is a **template**. `stamp = "force"` fills it from
+  Bazel's **workspace status**: one ID per laptop, the same on every run, so
+  nobody overwrites anybody.
+
+<div class="code-sm">
+
+<<< ../tools/workspace_status.sh#bwb_id bash[tools/workspace_status.sh]
+
+</div>
+
+Hooked up in `.bazelrc` with `--workspace_status_command`.
+
+</div>
+</div>
+
+---
+
+<div class="step-kicker opacity-55">push · 3 · eager, under the hood</div>
+
+# Eager: every blob rides in runfiles
+
+<div class="grid grid-cols-2 gap-6 mt-4">
+<div class="text-sm">
+
+**Before the push**, `bazel run` hands the pusher its runfiles:
+
+```console
+push_eager.exe.runfiles/
+  …/img.exe            # the pusher
+  …/push_eager.json    # request: blobs by digest
+  …/layer/0 … layer/4  # → the 5 layer blobs
+```
+
+All the layer content (**78 MB** here) must be **materialized on the local
+disk** before the push starts. Zero extra infra, works anywhere.
+
+</div>
+<div class="text-sm">
+
+**Push it three times:**
+
+```bash
+bazel run //samples/python:push_eager
+```
+
+<div class="push-table">
+
+| push | what changed | blob transfers |
+|---|---|---|
+| 1st | — | **7**: 5 layers ＋ config ＋ manifest |
+| 2nd | nothing | **2**: manifest ＋ config |
+| 3rd | edit `app.py` | **3**: ＋ the app layer |
+
+</div>
+
+**Why only 2? Layer deduplication.** Each blob is named by its `sha256`, so the
+pusher skips every digest the registry already has. **Content addressing**, the
+same trick that lets images share layers, now saving **bandwidth**.
+
+</div>
 </div>
 
 ---
@@ -965,28 +1035,29 @@ class: lab-slide
 # Lab 3 · Ship it, then ship it again
 
 **The problem.** A registry is the shared pantry. Push with no daemon and no
-login, then push again and watch Module 2's dedup turn into bandwidth you
+login, then push again and watch **layer deduplication** turn into bandwidth you
 don't spend.
 
 ```bash
-# zero infra: ttl.sh is anonymous and write-open (1-hour TTL)
-bazel run //samples/python:push_eager      # → ttl.sh/bwb-graphviz:1h
-bazel run //samples/python:push_eager      # again: blobs already there → skipped
-
-# or keep it on your machine
+# 1 · on your machine: no Wi-Fi needed
 bazel run //tools:local_registry           # OCI registry on localhost:5000
-bazel run //samples/python:push            # edit app.py, push again
+bazel run //samples/python:push            # 7 blobs
+bazel run //samples/python:push            # again: 2 (manifest + config)
+# now edit app.py and push again: 3 (+ the app layer)
+
+# 2 · a shared registry, your own repo
+bazel run //samples/python:push_eager      # → ttl.sh/bwb-<your-id>/graphviz:1h
 ```
 
 <div class="lab-done">
 
-✅ **You're done when** the second push skips the blobs the registry already has, and after an `app.py` edit only the app blob goes up.
+✅ **You're done when** the second push skips the blobs the registry already has, and after an `app.py` edit only the app layer joins the manifest and config.
 
 </div>
 
 <div class="lab-stuck">
 
-No network for `ttl.sh`? Use the local registry. With no Docker daemon it falls back to a pinned `crane`, so it still works.
+No network for `ttl.sh`? Step 1 is the whole lesson. No Docker daemon? `local_registry` falls back to a pinned `crane`, so it still works.
 
 </div>
 
@@ -995,7 +1066,7 @@ layout: section
 ---
 
 # Module 4 · Cooking at scale
-<div class="opacity-60">Remote cache · RBE · one base, N images · ~5 min</div>
+<div class="opacity-60">Remote cache · RBE · lazy push · one base, N images · ~5 min</div>
 <div class="divider-half half-ship">delivery · push · pull</div>
 
 <!-- IMAGE (divider motif, small/corner): slides/images/divider-chain-kitchen.png — a large industrial / restaurant-chain kitchen -->
@@ -1080,6 +1151,65 @@ Content-addressing is what makes that *safe*: same digest ⇒ same bytes, so nob
 </div>
 
 ---
+
+<div class="step-kicker opacity-55">push · 4 · lazy</div>
+
+# Lazy push: straight from the cache
+
+<div class="grid grid-cols-2 gap-6 mt-4">
+<div>
+
+<div class="code-sm">
+
+<<< ../samples/python/BUILD.bazel#push_lazy python[samples/python/BUILD.bazel] {4}
+
+</div>
+
+<div class="text-sm mt-3">
+
+**Where to** didn't change: same registry, same repo. Only **where the bytes
+come from** did. They already sit in the pantry, so the pusher streams them
+**from the cache to the registry** over REAPI ByteStream.
+
+</div>
+
+</div>
+<div class="text-sm">
+
+<div class="code-sm">
+
+```bash
+bazel run //tools:local_cache
+bazel run --config=local-bwb \
+    --@rules_img//img/settings:remote_cache=grpc://localhost:9092 \
+    //samples/python:push_lazy
+```
+
+</div>
+
+<div class="push-table">
+
+| | **eager** | **lazy** |
+|---|---|---|
+| bytes from | local disk | the remote cache |
+| runfiles | 78 MB | 59 KB |
+| a first push | 7 from disk | 0 from disk, 7 from cache |
+
+</div>
+
+Needs a remote **cache**, not remote execution.
+
+</div>
+</div>
+
+<div class="mt-3 opacity-70 text-sm">
+
+Rule of thumb: **eager** for laptops and small images · **lazy** once you have a
+cache.
+
+</div>
+
+---
 class: lab-slide
 ---
 
@@ -1095,6 +1225,9 @@ output, and watch the build do almost no work.
 bazel run //tools:local_cache                                   # REAPI cache on localhost:9092
 bazel clean && bazel build --config=local-cache //samples/...   # cold: uploads
 bazel clean && bazel build --config=local-cache //samples/...   # warm: downloads
+bazel run --config=local-bwb \
+    --@rules_img//img/settings:remote_cache=grpc://localhost:9092 \
+    //samples/python:push_lazy                                  # 0 from disk
 
 bazel run //labs:progress                                       # then: the Flow ladder
 ```
@@ -1107,7 +1240,7 @@ bazel run //labs:progress                                       # then: the Flow
 
 <div class="lab-stuck">
 
-Next in `labs/remote/README.md`: a local OCI registry, lazy push, remote execution, and `--config=local-bwb` (82 MB of image on disk → 742 KB).
+Next in `labs/remote/README.md`: a local OCI registry, remote execution, and `--config=local-bwb` (82 MB of image on disk → 742 KB).
 
 </div>
 
@@ -1170,7 +1303,7 @@ layout: section
 ---
 
 # Appendix
-<div class="opacity-60">If time / backup · why no <code>RUN</code> · testing without a daemon · looking inside an image · lazy push · what hermetic still borrows · how the plates were made · coming from <code>rules_oci</code></div>
+<div class="opacity-60">If time / backup · why no <code>RUN</code> · testing without a daemon · looking inside an image · what hermetic still borrows · how the plates were made · coming from <code>rules_oci</code></div>
 
 <!-- IMAGE (divider motif, small/corner): slides/images/divider-tasting-spoon.png — a chef tasting from a spoon (quality check) -->
 
@@ -1195,8 +1328,8 @@ pins exactly which bytes. To make Bazel enforce it:
 
 ### So the packages become artifacts
 `dot` + its `.deb` packages land as ordinary **content-addressed layers** — same
-inputs, same digest. Which is the only reason Module 2 worked at all: byte-identical
-layers **dedupe**, and an image with no base at all becomes possible.
+inputs, same digest. That is what makes **layer deduplication** work at all:
+byte-identical layers **dedupe**, and an image with no base at all becomes possible.
 
 </div>
 </div>
@@ -1379,36 +1512,6 @@ Needs **nothing installed**: both `crane` and the registry are pinned static
 binaries, fetched by Bazel. And a layout is a set of dangling links until you ask
 for them — under `--remote_download_minimal` the bytes may never come home at
 all, taking `image.tar` from **82 MB** to **742 KB**.
-
-</div>
-
----
-
-<div class="step-kicker opacity-55">push · experiment 2</div>
-
-# Lazy push, straight from a remote cache
-
-With a remote cache, **lazy** push (`strategy = "lazy"`) skips the runfiles
-and streams blobs **straight from the remote cache** to the registry — the win
-when images are huge or numerous.
-
-```bash
-bazel run //tools:local_cache                   # a cache on localhost, no account
-bazel run --config=local-bwb \
-    --@rules_img//img/settings:remote_cache=grpc://localhost:9092 \
-    //samples/python:push_lazy
-```
-
-- **Needs a remote cache — not remote execution.** `img` speaks REAPI ByteStream
-  straight to the CAS. `//tools:local_cache` is a pinned static binary, so you can
-  run this in this room.
-- **Credential-free:** a local cache + `ttl.sh` means nothing needs a login. With
-  a hosted cache, keep pushing to `ttl.sh` so only the *cache* does. A CI-friendly
-  *push-at-build-time* variant exists too.
-
-<div class="mt-3 opacity-70 text-sm">
-
-Rule of thumb: **eager** for laptops/small images · **lazy** once you have a cache.
 
 </div>
 

@@ -49,6 +49,7 @@ slidev_bin.slidev(
         "//samples/distroless:slides_inputs",
         "//samples/python:slides_inputs",
         "//samples/shared_layers:slides_inputs",
+        "//tools:slides_inputs",
         # All Bazel-linked npm deps (incl. the hoisted @vue/compiler-sfc that
         # Slidev resolves dynamically at build time).
         ":node_modules",

@@ -191,8 +191,9 @@ the registry recognised it without being told.
 
 ### Lazy push does not need RBE
 
-The deck says `strategy = "lazy"` needs remote execution. It doesn't — it needs a
-remote **cache**, which is a much lower bar. Point `img` at the local one:
+A common assumption is that `strategy = "lazy"` needs remote execution. It
+doesn't — it needs a remote **cache**, which is a much lower bar. Point `img` at
+the local one:
 
 ```bash
 bazel run --config=local-bwb \
@@ -206,8 +207,8 @@ blob transfers: 0 from disk, 0 from disk cache, 0 from container registry, 2 fro
 
 Zero blobs from disk. The push tool streamed them straight out of the CAS over
 ByteStream — no giant runfiles, no remote executor. Compare the two targets'
-runfiles: `push_eager` carries 4 layer blob entries, `push_lazy` carries a
-`layer_hints` file instead.
+runfiles: `push_eager` carries 5 layer blob entries (~78 MB), `push_lazy` carries
+a `layer_hints` file instead (~59 KB).
 
 ### Read the image back, with no daemon
 

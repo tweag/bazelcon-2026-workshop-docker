@@ -25,8 +25,7 @@ jobs:
       # the runner dies before it can write a single log line: the failure
       # arrives as a job with no output at all and a `No space left on device`
       # annotation. So reclaim the space, and stop the disk cache from keeping
-      # a second copy of every output — .bazelrc line 16 asks CI to do exactly
-      # that, and until now nothing did.
+      # a second copy of every output, as .bazelrc asks CI to do.
       - name: Make room on the runner
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
@@ -128,10 +127,9 @@ jobs:
           test -n "$a"
           test "$a" = "$b"
 
-  # The local-infrastructure labs (labs/remote/README.md). Neither of these paths had
-  # any test coverage before: the registry was a docs-only workflow, and the
-  # remote-cache material pointed at a hosted service nobody could run in CI.
-  # Both now run from pinned static binaries, so this job needs no services.
+  # The local-infrastructure labs (labs/remote/README.md): the registry and the
+  # remote cache both run from pinned static binaries, so this job needs no
+  # services.
   remote:
     runs-on: ubuntu-latest
     steps:
@@ -208,7 +206,8 @@ jobs:
             //samples/python:push_lazy -- --registry localhost:5000 2>&1 \
             | tee /tmp/lazy.log
           grep -qE "blob transfers: 0 from disk, .*[1-9][0-9]* from remote cache" /tmp/lazy.log
-          curl -fsS http://localhost:5000/v2/bwb-graphviz/tags/list \
+          bwb_id=$(tools/workspace_status.sh | awk '/^STABLE_BWB_ID /{print $2}')
+          curl -fsS "http://localhost:5000/v2/bwb-${bwb_id}/graphviz/tags/list" \
             | tee /dev/stderr | grep -q 1h
 
       - name: Tear down

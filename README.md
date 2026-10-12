@@ -1,15 +1,13 @@
 # High Velocity Image Composition at Scale
 
-Workshop repo for the BazelCon 2026 talk [**"High Velocity Image Composition at Scale - Building with images with rules_img"**](https://events.linuxfoundation.org/bazelcon/features/training-day/#build-without-the-bytes-high-velocity-image-composition-at-scale).
+Workshop repo for the BazelCon 2026 talk [**"High Velocity Image Composition at Scale - Building images with rules_img"**](https://events.linuxfoundation.org/bazelcon/features/training-day/#build-without-the-bytes-high-velocity-image-composition-at-scale).
 
 A single Bazel workspace that builds **both** the container-image samples and
 the Slidev presentation about them — the slides are a build artifact of the
 same graph that builds the images.
 
 📊 **Live deck:** https://tweag.github.io/bazelcon-2026-workshop-docker/
-— published from `main` by [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
-**once the repo is public** (GitHub Pages can't publish from a private free-tier
-repo; the workflow self-skips while private).
+— published from `main` by [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
 📄 **PDF:** attached to every
 [release](https://github.com/tweag/bazelcon-2026-workshop-docker/releases/latest)
 — built from that version's sources by [`.github/workflows/pdf.yml`](.github/workflows/pdf.yml),

@@ -7,8 +7,8 @@ load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//tools/platforms:defs.bzl", "LINUX")
 
-# Two real-ish services — an `api` and a `worker` — that share layers (workshop
-# Q5). Both sit on the same python_base_img and include the same shared config +
+# Two real-ish services — an `api` and a `worker` — that share layers.
+# Both sit on the same python_base_img and include the same shared config +
 # library layer; only the per-service app layer differs. Because layers are
 # content-addressed, the base + common blobs are byte-identical across both
 # images — built once, cached once, pushed once.

@@ -1,4 +1,4 @@
-"""Prove which layers two images share (workshop Q5).
+"""Prove which layers two images share.
 
 Diffs the layer-blob digests of the two images' manifests. The base image layers
 and the common layer are byte-identical, so they share digests (and therefore
@@ -8,8 +8,6 @@ build once, cache once, and push once).
 
 The manifests arrive as runfiles of this target, so `bazel run` builds both
 images first, in the same invocation, and this runs on the pinned interpreter.
-It used to be a shell script that started a second Bazel server and parsed the
-JSON with the host's `python3`.
 """
 
 import json

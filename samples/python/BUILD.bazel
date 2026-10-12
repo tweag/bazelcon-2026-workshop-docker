@@ -102,8 +102,15 @@ image_load(
     tag = "bwb/python-graphviz:latest",
 )
 
-# Daemonless push to a local registry. Start one first:
-#   bazel run //tools:local_registry     # registry:2 on localhost:5000
+# --- Push: one rule, built up step by step (deck: Module 3, then Module 4) ---
+# The deck transcludes #push_local, #push_ttl and #push_lazy below
+# (`<<< ../samples/python/BUILD.bazel#…`) — keep each region tight.
+#
+# Step 1 — the minimum: a local registry. Start one first:
+#   bazel run //tools:local_registry     # registry:2 (or crane) on localhost:5000
+#   bazel run //samples/python:push
+# No `strategy` set, so it takes rules_img's default: eager (see step 3).
+#region push_local
 image_push(
     name = "push",
     image = ":image",
@@ -111,38 +118,47 @@ image_push(
     repository = "bwb/python-graphviz",
     tag = "latest",
 )
+#endregion
 
-# --- Push-strategy experiments (workshop: "eager vs lazy") -------------------
-# Experiment 1 — EAGER push, zero infra. All of the image's blobs ride in this
-# target's runfiles, so `bazel run` uploads them directly — no remote cache
-# needed. ttl.sh is an anonymous, write-open registry (the image auto-expires
-# after the tag's TTL), so there's no local registry, no daemon, no credentials.
-# Run it twice: the second push skips blobs the registry already has
-# (content-addressed dedup showing up as bandwidth).
+# Step 2 — the same rule, a shared registry. ttl.sh is anonymous and write-open,
+# so there's no local registry, no daemon, no credentials; the image expires
+# after the tag's TTL. {{.STABLE_BWB_ID}} is a stamp value from
+# tools/workspace_status.sh (a hash of user@host), so each attendee gets their
+# own repo and nobody overwrites anybody else's tag.
+# Step 3 — EAGER, spelled out: every layer blob is symlinked into this target's
+# runfiles (~78 MB here), so `bazel run` uploads from local disk. Run it twice:
+# the second push only sends what the registry lacks.
 #   bazel run //samples/python:push_eager
+#region push_ttl
 image_push(
     name = "push_eager",
     image = ":image",
-    strategy = "eager",
+    strategy = "eager",  # the default, spelled out
     registry = "ttl.sh",
-    repository = "bwb-graphviz",  # change to your own name to avoid collisions
-    tag = "1h",  # ttl.sh reads the tag as the image's lifetime
+    repository = "bwb-{{.STABLE_BWB_ID}}/graphviz",
+    tag = "1h",  # ttl.sh: the tag IS the lifetime
+    stamp = "force",  # expand {{…}} from workspace status
 )
+#endregion
 
-# Experiment 2 — LAZY push (needs a remote CACHE, not remote execution). Instead
-# of stuffing every blob into runfiles, the push tool streams them straight from
-# the cache over REAPI ByteStream — the win once images are huge or numerous.
-# A plain remote cache is enough; try it locally with `bazel run //tools:local_cache`,
-# or at home with a hosted one, with ttl.sh keeping the registry credential-free:
-#   bazel run //samples/python:push_lazy --remote_cache=grpc://…
+# Step 4 — LAZY (needs a remote CACHE, not remote execution). The runfiles hold
+# only metadata (~59 KB here); the push tool streams every blob straight from
+# the cache over REAPI ByteStream, so nothing has to be on local disk:
+#   bazel run //tools:local_cache
+#   bazel run --config=local-bwb \
+#       --@rules_img//img/settings:remote_cache=grpc://localhost:9092 \
+#       //samples/python:push_lazy
+#region push_lazy
 image_push(
     name = "push_lazy",
     image = ":image",
-    strategy = "lazy",
+    strategy = "lazy",  # was "eager"
     registry = "ttl.sh",
-    repository = "bwb-graphviz",
+    repository = "bwb-{{.STABLE_BWB_ID}}/graphviz",
     tag = "1h",
+    stamp = "force",
 )
+#endregion
 
 # Prove the image assembles end to end (analysis + layer build).
 build_test(

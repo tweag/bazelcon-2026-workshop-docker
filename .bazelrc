@@ -33,6 +33,11 @@ test --build_tests_only
 # Readers need Docker >= 23 / containerd >= 1.5; every registry stores it as-is.
 build --@rules_img//img/settings:compress=zstd
 
+# Stamp values for the ttl.sh push targets: STABLE_BWB_ID gives every laptop its
+# own repo, ttl.sh/bwb-<id>/graphviz (see tools/workspace_status.sh). Only
+# targets with `stamp = "force"` read it, so other cache keys are unaffected.
+build --workspace_status_command=tools/workspace_status.sh
+
 # Surface this repo's own conventions.
 common --enable_platform_specific_config
 

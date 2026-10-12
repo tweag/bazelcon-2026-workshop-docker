@@ -750,8 +750,8 @@ def cmd_slides(args):
         bad.append("slides.md uses --config=%s, which .bazelrc does not define" % cfg)
     if args.run and not bad:
         # The deck assumes you did README.md's setup, so run exactly that first
-        # — it gets tested too. It no longer builds what the tests don't need
-        # (`test --build_tests_only`): a slide that reads bazel-bin must build first.
+        # — it gets tested too. `test --build_tests_only` skips what the tests
+        # don't need: a slide that reads bazel-bin must build first.
         setup = next(l.split("#")[0].strip() for l in (ROOT / "README.md").read_text()
                      .splitlines() if l.startswith("bazel test //"))
         try:

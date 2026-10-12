@@ -27,7 +27,7 @@ slide projects this run-sheet, a **lab card** slide right after it gives the two
 ways to follow along (the README setup on a laptop, or fork + PR with GitHub
 Actions doing the building), and each module closes on its own **Lab** slide.
 
-**Budget:** the deck is **44 main slides ＋ 11 appendix**, retimed to **~79.5 min of
+**Budget:** the deck is **44 main slides ＋ 11 appendix**, timed at **~79.5 min of
 content in the 90-min slot** — the remaining ~10.5 min is deliberate slack for
 questions, a slow laptop, and a demo that misbehaves. Don't spend it in advance.
 
@@ -49,7 +49,7 @@ verbs) sits at the Module 3 divider as the pivot between them.
 | 4 | Cooking at scale | delivery | 5m | — (concept) | 5m |
 | — | Wrap-up + Q&A | — | 6m | — | 6m |
 | — | **Content total** | | | | **78m** |
-| A | Appendix — validation · lazy push · comparison table | — | if time | daemonless structure tests | — |
+| A | Appendix — validation · comparison table | — | if time | daemonless structure tests | — |
 
 **Lab 0 is the schedule risk.** `bazel build //...` pulls the Node/Slidev
 toolchain, `@pypi`, the 162-deb `@graphviz_apt` and (via `//labs/...`)
@@ -149,7 +149,7 @@ taken over the **compressed** blob as it ships, while the config's
 **index** can sit above the manifest, pointing at one manifest per platform. Spec:
 `github.com/opencontainers/image-spec`.)*
 
-**Cooking containers with Bazel [Q1][Q2]** *(the "what is Bazel" beat is folded
+**Cooking containers with Bazel** *(the "what is Bazel" beat is folded
 in here as one sentence rather than its own slide — this is a BazelCon room)*.
 "**Bazel** is a build system: it assembles artifacts from declared inputs,
 reproducibly and at scale — you declare *what goes where* instead of scripting
@@ -169,16 +169,13 @@ Docker isolates the **plate** while Bazel makes the **kitchen** reproducible."
 over rows of prepped bowls and stoppered jars, every one of them leader-lined down
 onto a single finished plate. **Say the metaphor out loud** — "everything that goes
 into the dish is on the bench before the cooking starts; nothing gets fetched
-mid-recipe" — because that *is* declared inputs, and the picture is doing the work
-the paragraph used to.)*
+mid-recipe" — because that *is* declared inputs, and the picture does the work of
+a paragraph.)*
 
-*(Staging: the slide is deliberately shorter than this — the opening "what is
-Bazel" sentence shrank to a two-line lede, and the plate now takes the whole left
-column at `max-h-80` with the Bazel and Docker blocks stacked beside it. You still
-**say** the whole paragraph above. The keywords that left the paragraph landed in
-the columns — "declared inputs" and "caches the rest" on the Bazel side — and
-"two different guarantees, and you want both" now opens the footer, since the new
-title no longer carries that thesis.)*
+*(Staging: the slide is deliberately shorter than this — a two-line lede, the
+plate across the whole left column, the Bazel and Docker blocks stacked beside it.
+You still **say** the whole paragraph above; its keywords sit in the columns, and
+"two different guarantees, and you want both" opens the footer.)*
 
 > **Lab 0 (4m):** `git clone … && bazel test //samples/... //labs/... //tools/...` — **not** `//...`,
 > which drags in the Node toolchain the deck needs. Then note: these very slides
@@ -234,8 +231,7 @@ built once, never rebuilt or re-downloaded anywhere. That's Module 4, and it's
 where the whole design pays off."
 
 *(Deliberately **do not** unpack the mechanics here — how big the manifest pull is,
-what a descriptor is, what stays in CAS. It was on this slide and it bought
-nothing: the audience has no use for it yet, and Module 4 ("Building Without
+what a descriptor is, what stays in CAS. The audience has no use for it yet, and Module 4 ("Building Without
 Bytes") is where the same facts land as a payoff instead of as trivia. The code is
 on the "Assemble, don't run" slide a few beats later.)*
 
@@ -246,11 +242,9 @@ states the takeaway; a coloured kicker above it names the directive, so the
 audience always knows which of the four we're on. Don't rush the `RUN apt-get` or
 `ENTRYPOINT` slides — those are the two that draw questions.)*
 
-*(The separate roadmap slide was cut — the four directives were being shown three
-times over, as roadmap → four slides → recap. Its framing line now opens the
-`FROM` slide: "four directives, one at a time — imperative steps that run become
-declarative artifacts that assemble." "The whole translation" still closes the
-walk.)*
+*(There is no separate roadmap slide; the framing line opens the `FROM` slide:
+"four directives, one at a time — imperative steps that run become declarative
+artifacts that assemble." "The whole translation" closes the walk.)*
 
 **`FROM` · "A base is a digest, not a tag."** "`FROM python:3.12-slim-bookworm`
 becomes an `images.pull` up in `MODULE.bazel` — that whole block is the repo's
@@ -262,8 +256,8 @@ it's the non-default, and it's a live preview of Module 4's lazy-pull story — 
 base's blobs are fetched only when something actually needs them. Here that's the
 docker-save tarball the daemonless structure test reads.)*
 
-**`RUN apt-get` · "The system dep becomes pinned bytes."** *(Say this — it came
-off the slide to make room: `apt.install` is not a Bazel command, it's a **tag
+**`RUN apt-get` · "The system dep becomes pinned bytes."** *(Say this — it is
+not on the slide: `apt.install` is not a Bazel command, it's a **tag
 class on a module extension** shipped by `rules_distroless`. In the loading phase
 it reads `graphviz.yaml` — Debian snapshot ＋ arch ＋ package list — resolves it
 against `graphviz.lock.json`, and generates the `@graphviz_apt` repo whose `:flat`
@@ -295,11 +289,11 @@ network, with apt's own resolver making choices**. You pin a *command*; you don'
 pin *bytes*. `rules_distroless` moves the resolution to the loading phase and
 hands the build a lockfile plus a content-addressed tar.)*
 
-**`RUN pip` · `COPY` · "Four steps, one layer."** *(Presenter: this slide is now
+**`RUN pip` · `COPY` · "Four steps, one layer."** *(Presenter: this slide is
 built to be read **against the previous one** — same two-block shape, same
 `MODULE.bazel`-then-`BUILD.bazel` order, both halves transcluded. Say "same shape,
 one package manager over" and let the audience notice the symmetry themselves;
-that is the whole reason the layout was changed.)*
+that is the whole reason for the layout.)*
 "Four imperative steps — copy the lock, pip install, `WORKDIR`, copy the source —
 collapse into two rules, and they arrive the *same way the apt packages did*.
 `pip.parse` is `rules_python`'s module extension: in the **loading** phase it
@@ -368,7 +362,7 @@ store it adds only the blobs the store lacks; a classic Docker daemon still take
 a full `docker load`. `bazel run //samples/python:image_load && docker run --rm
 bwb/python-graphviz`."
 
-**The "Docker tax" [Q6].** "People reach for Docker to *get* hermeticity — 'just
+**The "Docker tax".** "People reach for Docker to *get* hermeticity — 'just
 put it in a container.' Hermeticity's real payoff, though, is **efficiency**. Same
 test suite, two ways: `py_test` under Bazel (sandboxed, cached, parallel,
 incremental) vs. a `docker build` that pip-installs and runs pytest. Change one
@@ -415,7 +409,7 @@ lime `UPDATE:` callout on the swapped tray; that's the incremental rebuild.)*
 
 **Distroless: a sandwich without the bread.** "Take the base OS away, keep only
 the filling — just the binary and what it needs, built **from scratch**. Say why
-this is even possible, because it's the one line that moved here from a cut slide:
+this is even possible:
 `apt.install` already resolved `dot` at **load** time into content-addressed
 layers, so there is no `RUN` left that needs an OS underneath it. Read the
 rule for what *isn't* there: there's no `base` at all, and because there's nothing
@@ -443,7 +437,7 @@ follow-up — see the comment in `samples/distroless/BUILD.bazel`. Say it only i
 minutes Module 2 doesn't have, and it deflates the payoff a beat after you land
 it.)*
 
-**Two services, one shared blob** *(dedup [Q5])*. "Bazel's action cache keys every action
+**Two services, one shared blob** *(dedup)*. "Bazel's action cache keys every action
 on **input digests + command + environment**; identical action → built once. Layers
 are **content-addressed**, so a shared base/deps layer is built once and reused
 across *every* image that references it. `//samples/shared_layers` builds two
@@ -477,9 +471,8 @@ two — everything so far was `build` and `run` on your machine. The other two l
 the building: **push** (image → registry) is this module, **pull** (registry →
 image) is Module 4. And delivery is where content addressing stops being trivia
 and starts being **bandwidth**: a registry that already holds a blob doesn't want
-it twice." *(This slide used to open Module 0 as a neutral lifecycle map. It works
-much better here as the pivot — build/run are dimmed and checked off, push/pull
-are what's next.)*
+it twice." *(This slide is the pivot between the halves — build/run are dimmed
+and checked off, push/pull are what's next.)*
 
 *(On screen: `docker-lifecycle.png` — the *same* sandwich going round a ring of
 four kitchen scenes: hands assembling it at a prep bench (**build**), a waiter
@@ -489,48 +482,58 @@ the same box (**pull**). **Walk the ring with your finger and name the four verb
 the point the plate makes and the legend can't is that it is one sandwich the whole
 way round.)*
 
-**Push — daemonless, to any registry** *(the `push` stage)*. "`rules_img` gives
-`image_push`: no Docker daemon, no socket — it talks straight to the registry API.
-A registry is a **central pantry** keyed by content: push once, and every kitchen
-pulls the exact same ingredient. Then do it — **Experiment 1**, and it needs no
-infra at all, because **ttl.sh** is an anonymous, write-open registry: no local
-registry, no daemon, no credentials, one-hour TTL. If you'd rather stay on the
-machine, `//tools:local_registry` then `:push` gets you the same result."
-*(rules_img also has `image_index` for multi-platform images; we don't ship one in
-this workshop, so it stays out of the deck — measured, not asserted.)*
+*(Push is built up in four steps, one new idea each: **1** a local registry, **2**
+a shared registry, **3** what eager does under the hood, then — in Module 4, once
+the cache exists — **4** lazy. Two independent choices, and the deck keeps them
+apart: **where to** (`registry`/`repository`/`tag`) and **where the bytes come
+from** (`strategy`).)*
 
-*(The standalone "registry: a shared pantry" slide was merged away, so say the
-pantry framing once, here at Push — "push once, and every kitchen pulls the exact
-same ingredient." The "one shelf, many dishes" bullet moved onto Module 4's
-chain-wide pantry slide.)*
+**`image_push`, the minimum** *(push · 1 · a local registry)*. "A registry is a
+**central pantry** keyed by content: push once, and every kitchen pulls the exact
+same ingredient. `image_push` is a rule. `bazel run` builds a pusher plus a request
+file that lists every blob by digest, then runs it — no Docker daemon, no socket,
+it talks straight to the registry API. Five attributes: what, where, which name,
+which tag. Seven blob transfers: five layers, the config, the manifest. Notice
+there's no `strategy` — that's the default, eager, and we'll open it up in two
+slides."
 
-**Optimizing the push.** *(The doing is on the previous slide; this one is purely the optimizations, in
-the order they pay off. Eager comes first because the room just ran it; lazy's
-demo is in the appendix.)*
-"Everything from here is about not moving bytes you don't have to. **One:** only
-the blobs the registry doesn't already have go up — Module 2's dedup, now spent as
-**bandwidth**, so a shared base layer uploads once. Run `push_eager` a second time
-and watch it skip. **Two:** that push used `strategy = "eager"` — every blob rides
-in the target's runfiles and `bazel run` uploads them. Zero infra, works anywhere,
-much like rules_oci; it's what we just ran. **Three:** `strategy = "lazy"` streams
-blobs **straight from a remote cache** to the registry, so nothing is staged into
-runfiles — the win once images are huge or numerous. That needs infra we haven't
-met yet, so it's Module 4, and Experiment 2 in the appendix. Rule of thumb: eager
-for laptops and small images, lazy once you have a cache."
+*(This is the one place the deck says the pantry framing, so say it here.
+rules_img also has `image_index` for multi-platform
+images; we don't ship one in this workshop, so it stays out of the deck.)*
 
-*(Precision worth keeping: lazy needs a remote **cache**, and that is all — `img`
-talks REAPI ByteStream straight to the CAS. It does **not** need remote execution.
-That distinction gets asked about every time.)*
+**Same rule, a shared registry** *(push · 2)*. "Only **where to** changed — the
+highlighted lines. **ttl.sh** is anonymous and write-open: no login, and the tag
+*is* the lifetime, one hour. With a room full of people on one public registry you
+need one name each, so the repository is a **template**: `{{.STABLE_BWB_ID}}`.
+`stamp = "force"` fills it from Bazel's **workspace status** — a script `.bazelrc`
+runs on every build, here hashing `user@host`. Same ID every run, so your second
+push finds your blobs; nobody's username lands on a public registry."
+
+*(If asked: only targets with `stamp` read the status, so nothing else loses its
+cache key. A unique name stops collisions, not load — the room still shares one
+uplink, which is why Lab 3 starts on the local registry.)*
+
+**Eager: every blob rides in runfiles** *(push · 3)*. "Here's what 'eager' means.
+`bazel run` hands the pusher its runfiles: the tool, the request, and all five
+layer blobs as symlinks — all 78 MB **materialized on the local disk** before the push
+starts. Zero infra, works anywhere. Now push it three times — the table's rows
+are the runs: seven the first time; two the second, the manifest and config,
+because the layers are already there; three after an `app.py` edit — the app
+layer joins them. Why only two? **Layer deduplication**: each blob is named by its
+`sha256`, so the pusher skips every digest the registry already has — Module 2's
+prep once, plate twice, now saving **bandwidth**. Eager isn't the
+only way to source those bytes — lazy takes them from a cache, and that's
+Module 4."
 
 > **Lab 3 (8m):**
-> 1. **Zero-infra (Experiment 1 · eager):** `bazel run //samples/python:push_eager`
->    → pushes to `ttl.sh/bwb-graphviz:1h` (anonymous, 1-hour TTL). Run it twice;
->    the second push skips the blobs the registry already has.
-> 2. **Local registry:** `bazel run //tools:local_registry` (registry:2 on
->    localhost:5000 — or, with no Docker daemon, a pinned `crane registry serve`
->    on the same port), then `bazel run //samples/python:push`; edit one line in
->    `app.py` and push again — only the changed app blob uploads (dedup by digest;
->    observed 7 → 3 → 2 blob transfers).
+> 1. **On your machine (no Wi-Fi):** `bazel run //tools:local_registry` (registry:2
+>    on localhost:5000 — or, with no Docker daemon, a pinned `crane registry serve`
+>    on the same port), then `bazel run //samples/python:push` twice; edit one line
+>    in `app.py` and push again (observed 7 → 2 → 3 blob transfers: manifest +
+>    config, then + the app layer).
+> 2. **A shared registry:** `bazel run //samples/python:push_eager` → pushes to
+>    `ttl.sh/bwb-<your-id>/graphviz:1h` (anonymous, 1-hour TTL; the ID is a stamped
+>    hash of user@host, so nobody overwrites anybody).
 >
 > *(On screen: the **Lab 3** slide — the problem, the commands, and a "you're done when" line. Leave it up for the whole lab; it closes Module 3.)*
 
@@ -574,20 +577,28 @@ is exactly what makes a shared cache *safe*: same digest ⇒ same bytes."
 
 *(On screen: `remote-cache-rbe.png`. **The plate labels itself**: the lettering reads `the remote cache — one
 content-addressed pantry` at the centre, `your laptop`, `CI — the hotel pass`, and
-`line cooks — RBE workers`. You no longer have to recite the mapping; **do** still
+`line cooks — RBE workers`. You don't have to recite the mapping; **do**
 say the metaphor — "one commissary larder, and every kitchen on the chain draws
 from it, including the five cooks working in parallel" — and trace the leader lines
 from the one green jar out to the three kitchens with your hand.)*
 
-*(Experiment 2 · lazy push lives in the **appendix** — it needs a remote cache to
-be interesting, and Module 3's "Optimizing the push" slide points here for it. It
-is demoable in the room: `bazel run //tools:local_cache` is a pinned static binary,
-no account. Reach for it if someone asks about scale, or if you're running ahead.)*
+**Lazy push: straight from the cache** *(push · 4)*. "Now the pantry exists. Same
+rule, one attribute: `strategy = "lazy"`. **Where to** didn't change — same
+registry, same repo; only **where the bytes come from** did. Read the table
+across: eager takes them from local disk, lazy from the remote cache; the runfiles
+shrink from 78 MB to 59 KB, the request and the layout, no layer blobs; and a
+first push is zero from disk, seven from the cache. Rule of thumb: eager for
+laptops and small images, lazy once you have a cache."
 
-*(The "Why `rules_img`" table was cut — it repeated the **lineage** slide from
-Module 1 almost verbatim. The one line worth keeping is now on Takeaways: "coming
-from `rules_oci`? Same declarative model; the win is keeping the bytes out of the
-graph." The Dockerfile-vs-Bazel comparison table moved to the appendix.)*
+*(Precision worth keeping: lazy needs a remote **cache**, and that is all — it
+does **not** need remote execution. That distinction gets asked about every time.
+It is demoable in the room: `bazel run //tools:local_cache` is a pinned static
+binary, no account. Lab 4 has the same command as a take-home step.)*
+
+*(No "Why `rules_img`" table here — the **lineage** slide in Module 1 covers it.
+The one line worth repeating is on Takeaways: "coming from `rules_oci`? Same
+declarative model; the win is keeping the bytes out of the graph." The
+Dockerfile-vs-Bazel comparison table is in the appendix.)*
 
 > **Lab 4 (take-home):** the closing slide of Module 4 hands the room
 > `labs/remote/README.md` §1. `bazel run //tools:local_cache`, then
@@ -614,14 +625,14 @@ digests travel *(Module 4)* · **Slide-as-Code**.
 **Mental model:** layers are granular, deterministic, cacheable build outputs —
 not opaque blobs handed to you by a daemon.
 **Point at the labs:** `bazel run //labs:progress` — the self-guided labs through
-the three walls (build-time · the ghost · hardware) is the take-home. The deck
-never used to mention it, so say it out loud here.
+the three walls (build-time · the ghost · hardware) is the take-home. No slide
+spells it out, so say it out loud here.
 
 **One last loop (closer).** The Python sample renders *this repo's own dependency
 graph* with `dot`, and the deck imports the result — a build action drawing the
 graph of the build that produced this very slide.
 
-**(If asked) ship as Docker vs. source-only? [Q7]** A Docker image is
+**(If asked) ship as Docker vs. source-only?** A Docker image is
 self-contained, immutable, scannable — a **portable, dependency-bundled runtime**;
 shipping source pushes a non-hermetic build onto the consumer. With Bazel you
 emit **both from one graph** — a hermetic build *and* a self-contained image.
@@ -639,8 +650,7 @@ _Pulled out of the main flow to protect the 90-min budget; present only if time
 allows or in answer to a question. In slide order: **why there's no `RUN` to
 run**, **testing without a daemon** (`docker run` as a test? → cheaper tastes →
 `container_structure_test` → when the image won't run), **looking inside an
-image** (inspecting a layer outside Bazel → or skip the layout), **lazy push**
-(Experiment 2; needs a remote cache, see the Module 4 note), the **Dockerfile vs
+image** (inspecting a layer outside Bazel → or skip the layout), the **Dockerfile vs
 `rules_img` comparison table**, **what "hermetic" still borrowed**, **how the plates
 were made**, and **"Coming from `rules_oci`?"**. The two comparison slides are different, so name
 the one you mean._
@@ -652,8 +662,8 @@ image, `docker run` it, and assert on the output. It works — but you cooked th
 **whole dish** just to taste one bite: slow, daemon-bound, serialized. We want the
 taste test *without* cooking the whole tray every time."
 
-**Cheaper tastes than a full `docker run`.** *(Was titled "Daemonless validation",
-but its second taste needs a daemon.)* "Two cheaper tastes before you cook the
+**Cheaper tastes than a full `docker run`.** *(Not "daemonless": the second taste
+needs a daemon.)* "Two cheaper tastes before you cook the
 whole dish: **test the entry script directly** with `py_test` (sandboxed, cached,
 parallel; no image needed), and a quick **negative test** — `docker run
 --network=none …` surfaces undeclared network deps. Handy, but not a proof; the
@@ -661,7 +671,7 @@ rigorous validator is Bazel's sandbox: only *declared files* are visible, so a
 missing ingredient fails at build time, every time. Host *tools* are the
 exception: that's the 'what hermetic still borrowed' slide."
 
-**`container_structure_test` [Q3]** *(the `test` stage)*. "How do you check an image
+**`container_structure_test`** *(the `test` stage)*. "How do you check an image
 is correct without a runtime? `container_structure_test` (GoogleContainerTools —
 a community project, not an official Google product) with
 `driver = "tar"` inspects the image's **files and config directly in the Bazel
@@ -727,7 +737,7 @@ isn't one."
 *(Two ways out, and the slide shows both because they fail differently.*
 ***Path A — ask Bazel for a real layout:*** *the `oci_layout` and `oci_tarball`
 output groups, surfaced as `//samples/python:image.oci` and `:image.oci.tar`.
-Here is the trap, and it is the reviewer's actual question: `image.oci` is
+Here is the trap, and it is the question people actually ask: `image.oci` is
 spec-compliant and every blob in it is a **symlink into the execroot**. `du -sh`
 reports **12K**; `du -shL` reports **78M**. Anything that copies or ships the
 folder without dereferencing hands over a tree of dangling links. So: `cp -rL`,
@@ -748,12 +758,11 @@ people to unpinned host tools. And the last caveat is the honest one: under
 `labs/remote/README.md` measured `image.tar` at 82 MB locally and 742 KB remote-only.
 A layout is a set of dangling links until you ask for the bytes.)*
 
-**Why there's no `RUN` to run [Q4].** *(Moved here out of Module 2 in the review
-pass: it is the module's hardest slide to explain and it sat off the module's spine,
-which is layer strategy rather than apt mechanics. The one load-bearing sentence —
-packages resolve at load time and land as content-addressed artifacts — now opens
-the distroless beat, so Module 2's argument still holds without it. Reach for this
-when someone asks "but where did `RUN` go?", which they reliably do.)*
+**Why there's no `RUN` to run.** *(Kept in the appendix: Module 2's spine is layer
+strategy, not apt mechanics, and its one load-bearing sentence — packages resolve
+at load time and land as content-addressed artifacts — opens the distroless beat.
+Reach for this when someone asks "but where did `RUN` go?", which they reliably
+do.)*
 "We already replaced `RUN apt-get` back in Module 1 — `apt.install` plus
 `layer_from_tar`. What I skipped was *why* it had to move, and it isn't stylistic.
 **A build action shouldn't need the network.** There is no `RUN` to run because
@@ -801,7 +810,7 @@ cards. Everything after them is built."
 **Coming from `rules_oci`? (the last appendix slide.)** *(Answers "what is a `rules_img`-only feature compared to
 `rules_oci`?". Deliberately **migration**-framed rather than a feature matrix — the deck
 teaches `rules_img` only, and a big comparison table would re-centre a ruleset
-that was removed on purpose. It is also the last slide for a reason: answer it if
+the deck doesn't teach. It is also the last slide for a reason: answer it if
 asked, don't lead with it.)*
 "Same declarative model — composing layers in a `BUILD` file, bases pinned by
 digest, daemonless push, structure tests all carry straight over. Four things are
@@ -811,8 +820,8 @@ runfiles. `strategy = "lazy"` streams blobs from a remote cache over REAPI
 ByteStream. Pulls are **shallow** — a base costs a manifest and a config, not its
 layers. And the default layout is sparse, which you just saw."
 
-*(**Be honest about how narrow the delta is.** Two slides earlier this script
-already says eager push is "much like `rules_oci`" — so daemonless push is* not
+*(**Be honest about how narrow the delta is.** Eager push works much
+like `rules_oci` — so daemonless push is* not
 *a differentiator, and claiming it would be exactly the unmeasured assertion this
 deck otherwise avoids. Same for the trade-offs, which are real: `os` and
 `architecture` are* not *yours to set in `rules_img` — the Bazel target platform
@@ -836,9 +845,10 @@ bazel run //samples/distroless:image_load # hermetic, pinned `dot` (scratch)
 bazel run //benchmark/pytest_tax:compare  # the "docker tax" delta
 bazel run //tools:local_registry          # registry:2 on localhost:5000
 bazel run //samples/python:push           # push (only changed blobs) -> localhost:5000
-bazel run //samples/python:push_eager     # Experiment 1: eager push -> ttl.sh (no infra)
+bazel run //samples/python:push_eager     # eager push -> ttl.sh/bwb-<your-id>/graphviz (no infra)
 bazel run //tools:local_cache             # a REAPI cache on localhost (no account)
-bazel run //samples/python:push_lazy      # Experiment 2: lazy push (needs the cache)
+bazel run --config=local-bwb --@rules_img//img/settings:remote_cache=grpc://localhost:9092 \
+    //samples/python:push_lazy            # lazy push: blobs stream from the cache
 bazel run //samples/shared_layers:digests # prove two images share layer blobs
 bazel build //samples/python:image.oci    # a real OCI layout (blobs are symlinks!)
 bazel build //samples/python:image.oci.tar # the same, packed: real bytes, no symlinks

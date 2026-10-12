@@ -62,7 +62,7 @@
   background: linear-gradient(90deg, var(--bc-lime), var(--bc-lime-light) 60%, var(--bc-forest));
 }
 
-/* Footer mark now lives in slides/global-top.vue (clickable repo link). */
+/* The footer mark lives in slides/global-top.vue (clickable repo link). */
 
 /* Headings in forest green, with a lime kicker under H1. */
 .slidev-layout h1 {
@@ -370,8 +370,8 @@ html.dark .slidev-code span {
  * Used as inline chips on the directive/attribute name in each row of the
  * Dockerfile -> rules_img mapping table. Tints share the palette's hues. */
 /* Four *distinguishable* washes, one per brand hue — forest / lime / blue /
- * charcoal. The earlier tints were three shades of pale green, so "matching
- * colours are the same concern" was unreadable from the back of the room. */
+ * charcoal, so "matching colours are the same concern" reads from the back of
+ * the room. */
 .hl-base   { background: rgba(20, 85, 47, 0.24);   box-shadow: inset 2px 0 var(--bc-forest); }
 .hl-deps   { background: rgba(124, 179, 66, 0.42); box-shadow: inset 2px 0 var(--bc-lime); }
 .hl-src    { background: rgba(26, 115, 232, 0.18); box-shadow: inset 2px 0 var(--bc-link); }
@@ -385,8 +385,8 @@ html.dark .slidev-code span {
 
 /* The Dockerfile -> rules_img walk. One directive per slide: Dockerfile on the
  * left, an arrow, rules_img on the right, one takeaway underneath. Everything
- * here exists to keep a step slide *sparse* — the earlier six-row table said
- * the same things but read as a wall. */
+ * here exists to keep a step slide *sparse*: a six-row table says the same
+ * things but reads as a wall. */
 .xlate {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -541,3 +541,8 @@ html.dark .slidev-code span {
 .hidden-reqs table { width: 100%; font-size: 0.72rem; line-height: 1.4; }
 .hidden-reqs th, .hidden-reqs td { padding: 0.35rem 0.5rem; vertical-align: top; }
 .hidden-reqs td:nth-child(2), .hidden-reqs td:nth-child(3) { opacity: 0.85; }
+
+/* Push slides: small result tables that share a half-slide column with code.
+ * "Push it three times" (runs) and "eager | lazy" (strategies). */
+.push-table table { width: 100%; font-size: 0.75rem; line-height: 1.4; }
+.push-table th, .push-table td { padding: 0.3rem 0.5rem; vertical-align: top; }
