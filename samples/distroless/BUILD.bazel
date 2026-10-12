@@ -4,7 +4,7 @@ load("@rules_img//img:image.bzl", "image_manifest")
 load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img//img:load.bzl", "image_load")
 
-# Close the `dot` system-dep gap *hermetically* (workshop Module 3 / TASK §2.9).
+# Close the `dot` system-dep gap *hermetically* (workshop Module 3).
 # Instead of `RUN apt-get install graphviz`, rules_distroless materializes `dot`
 # + its 162 transitive .debs (pinned in graphviz.lock.json) into
 # `@graphviz_apt//:flat`. We build the rootfs FROM SCRATCH (no base) via
@@ -35,7 +35,7 @@ platform(
 #region apt_layer
 layer_from_tar(
     name = "flat_layer",
-    src = "@graphviz_apt//:flat",  # hermetic `dot` + deps, pinned in the lock
+    src = "@graphviz_apt//:flat",  # `dot` + deps, pinned
 )
 #endregion
 

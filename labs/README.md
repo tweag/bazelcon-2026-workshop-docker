@@ -11,7 +11,7 @@ done.
 | [**Level 0 · Dockerfile → rules_img**](level0_graphviz/) | rebuild the deck's graphviz app ([Dockerfile](../samples/python/Dockerfile)) without a Dockerfile | `bazel test //labs/level0_graphviz:image_structure_test` |
 | [**Level 1 · Build-Time Trap**](level1_buildtime/) | ship a compiled wheel (`cryptography`) with no compiler running | `bazel test //labs/level1_buildtime:app_test` |
 | [**Level 2 · Ghost**](level2_ghost/) | make the `tesseract` binary pip never installs into a pinned layer | `bazel test //labs/level2_ghost:image_structure_test` |
-| [**Level 3 · Hardware Wall**](level3_hardware/) | give an OpenCL app a CPU device (POCL); see why GPUs stay a runtime contract | `bazel test //labs/level3_hardware:image_structure_test` |
+| [**Level 3 · Hardware Wall**](level3_hardware/) | give an OpenCL app a CPU device (POCL), as a pinned layer | `bazel test //labs/level3_hardware:image_structure_test` |
 | [**Level 4 · One interpreter, N images**](level4_shared/) *(extra)* | split a py_binary into interpreter / wheels / app layers that two services share | `bazel test //labs/level4_shared:shared_layers_test` |
 | [**Playground**](playground/) | change a working image: layers, digests, deps, base, distroless, push | `bazel test //labs/playground/...` |
 | [**Remote**](remote/) | remote cache, registry, lazy push, Build without the Bytes, RBE on localhost | `bazel run //tools:local_cache` |
@@ -25,6 +25,9 @@ done.
   `--config=hermetic-cc` to every command (or once:
   `echo "common --config=hermetic-cc" >> .bazelrc.user`) and Bazel brings its
   own. See the main [README](../README.md#no-c-compiler).
+- **Linux or macOS**, nothing to configure either way. Images are always Linux,
+  on your machine's CPU (arm64 on Apple silicon): that's the `platform = LINUX`
+  line in every `image_manifest`, already filled in. Tests run on your host.
 - **Docker** is only needed for the ★ stretch tasks that `docker run` an image.
   Everything else is daemonless.
 - **The first run takes ~15 minutes and ~600 MB of downloads** (the Python

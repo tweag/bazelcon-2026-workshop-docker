@@ -4,9 +4,36 @@
 extension, with **no compiler running at build time**. Bazel should *consume* a
 pinned, hashed, prebuilt wheel, and you prove that by opening the image layer.
 
+```mermaid
+flowchart TD
+  subgraph upstream["Upstream: cryptography's CI"]
+    rust["Rust code"] --> so["_rust.abi3.so"]
+    ossl["OpenSSL"] -->|statically linked| so
+    so --> whl["manylinux wheel<br/>(.whl)"]
+  end
+  subgraph you["Your build"]
+    whl -->|download + hash check| app["Python app"]
+  end
+  sdist["sdist: no wheel<br/>for your platform"] -.->|needs rustc, a C compiler,<br/>OpenSSL headers on your host| app
+```
+
 **Deck concepts:** `pip.parse` hub + `requirement()` · `pkg_tar(include_runfiles
 = True)` → `layer_from_tar` → `image_manifest` · a layer is just a tar ·
 `build_test` can't see what's inside an image.
+
+```mermaid
+flowchart TD
+  lock["requirements_lock.txt<br/>pinned + hashed"] --> hub["@labs_pypi<br/>prebuilt wheel"]
+  hub -. "TODO: deps = []" .-> app[":app<br/>py_binary"]
+  app --> tar[":app_layer<br/>pkg_tar"]
+  tar --> layer[":app_layer_img<br/>layer_from_tar"]
+  base["python_base_img"] --> image[":image<br/>image_manifest"]
+  layer --> image
+
+  app --> t1(["app_test<br/>Task 1"])
+  tar --> t2(["image_layer_test<br/>Task 2: opens the tar"])
+  image --> t3(["image_build_test<br/>green anyway"])
+```
 
 ## Start
 
@@ -14,10 +41,11 @@ pinned, hashed, prebuilt wheel, and you prove that by opening the image layer.
 bazel test //labs/level1_buildtime:app_test          # starts RED
 ```
 
-No install? Edit in a fork and let GitHub check it: see
-[Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
-
 You only edit one file: [`BUILD.bazel`](BUILD.bazel). Look for the `# TODO`.
+
+> [!TIP]
+> No install? Edit in a fork and let GitHub check it: see
+> [Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
 
 ## Tasks
 

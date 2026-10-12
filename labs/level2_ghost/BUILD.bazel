@@ -8,16 +8,14 @@ load("@rules_img//img:load.bzl", "image_load")
 load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("//tools/platforms:defs.bzl", "LINUX")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
-    "sample.png",
     "tesseract.yaml",
     "tesseract.lock.json",
     "image_test.yaml",
-    "app.py",
-    "app_test.py",
 ])
 
 py_binary(
@@ -52,7 +50,7 @@ pkg_tar(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
-    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+    optimize = True,  # dedupe + zstd (see .bazelrc)
 )
 
 # TODO(task 1): wrap "@tesseract_apt//:flat" in a layer_from_tar.
@@ -60,9 +58,10 @@ image_manifest(
     name = "image",
     base = image("python_base_img"),
     entrypoint = ["/app/app"],
-    # TODO(task 2): set env TESSDATA_PREFIX so tesseract finds its data.
+    # TODO(task 2): set env TESSDATA_PREFIX: the data path as explicit config.
     # TODO(task 1): add the tesseract layer to layers.
     layers = [":app_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
 )
 
 image_load(

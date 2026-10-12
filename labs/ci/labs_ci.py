@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """Lab checks, for CI and for anyone doing the labs.
 
-    python3 labs/ci/labs_ci.py answers [--changed FILE] [--all]
+    python3 labs/ci/labs_ci.py answers [--changed FILE] [--base REV] [--all]
         Run every lab's tasks and report which are done. With --changed (a
         list of edited paths) or --all, exit 1 if a lab you worked on is red.
+        With --base, edits to a lab's own tests are reset to REV first, so a
+        task is graded by the test as shipped.
     python3 labs/ci/labs_ci.py walkthrough level0|level1|level2|level3|level4|playground
         Maintainers: replay a lab README on the skeleton. Starts red, each
         README answer turns its task green, the stretch commands work. Every
         command and answer used here must appear verbatim in that README.
+    python3 labs/ci/labs_ci.py linux-images [--simulate-mac]
+        Every solution, playground and sample image is Linux on this machine's
+        CPU, down to the ELF bytes of the interpreter and a wheel. With
+        --simulate-mac, a Linux machine builds them as an Apple-silicon Mac would.
     python3 labs/ci/labs_ci.py readme
         Every Bazel target and relative link in the lab READMEs exists.
     python3 labs/ci/labs_ci.py slides [--run]
@@ -74,7 +80,7 @@ LABS = {
         "title": "Level 3 · Hardware Wall",
         "tasks": {
             "//labs/level3_hardware:image_structure_test": {
-                "OpenCL ICD loader": "1",
+                "POCL CPU device": "1",
                 "POCL CPU ICD is registered": "1",
             },
         },
@@ -176,6 +182,21 @@ def have_docker():
 
 
 # --- answers -----------------------------------------------------------------
+# A lab's own checks. The tasks are BUILD.bazel edits, so changes to these are
+# set aside before grading. (The playground invites you to edit its tests.)
+LAB_TEST = re.compile(r"^labs/level[^/]+/[^/]*(_test\.py|image_test[^/]*\.yaml)$")
+
+
+def reset_lab_tests(paths, base):
+    """git checkout `base` -- every edited lab test; returns the reset paths."""
+    reset = []
+    for path in sorted(p for p in paths if LAB_TEST.match(p)):
+        rc, _ = sh("git checkout %s -- %s" % (base, path))
+        if rc == 0:
+            reset.append(path)
+    return reset
+
+
 def task_rows(lab, status):
     """[(task, ok, detail)] for one lab."""
     per_task = {}
@@ -206,21 +227,27 @@ def readme_link(spec):
 
 
 def cmd_answers(args):
-    attempted = set()
+    attempted, paths = set(), []
+    if args.changed:
+        paths = Path(args.changed).read_text().split()
     if args.all:
         attempted = set(LABS)
     elif args.changed:
-        paths = Path(args.changed).read_text().split()
         for lab, spec in LABS.items():
             d = spec["dir"] + "/"
             if any(p.startswith(d) and not p.startswith(d + "solution/")
                    and not p.endswith(".md") for p in paths):
                 attempted.add(lab)
 
+    reset = reset_lab_tests(paths, args.base) if args.changed and args.base else []
+
     targets = [t for spec in LABS.values() for t in spec["tasks"]]
     status, errors = bazel_test(targets)
 
     md = ["## Lab answers", ""]
+    if reset:
+        md += ["> [!NOTE]", "> These are the labs' own checks, so they were graded as shipped "
+               "and your edits to them were set aside: " + ", ".join("`%s`" % p for p in reset), ""]
     if attempted:
         md.append("Labs you changed: " + ", ".join("**%s**" % l for l in sorted(attempted)))
     else:
@@ -374,10 +401,10 @@ def walk_level0(w):
     w.tests(image_structure_test=["python base", "dot binary", "Metadata"])
     w.run("bazel run //labs:explain -- level0", expect="the dot binary is bundled")
     w.say("task 1: FROM + ENTRYPOINT")
-    w.edit(b, '    layers = [":app_layer_img"],\n)',
+    w.edit(b, '    layers = [":app_layer_img"],\n    platform = LINUX,',
            '    base = image("python_base_img"),\n    entrypoint = [\n        "/app/app",\n'
            '        "--render",\n        "/tmp/supply_chain.png",\n    ],\n'
-           '    layers = [":app_layer_img"],\n)',
+           '    layers = [":app_layer_img"],\n    platform = LINUX,',
            readme=['base = image("python_base_img"),', '"/app/app", "--render", "/tmp/supply_chain.png",'])
     w.tests(image_structure_test=["dot binary"])
     w.say("task 2: the dot layer")
@@ -451,7 +478,7 @@ def walk_level3(w):
     w.say("start: task 0 green, two checks red")
     w.run("bazel test //labs/level3_hardware:app_test")
     w.run("bazel test //labs/level3_hardware:image_structure_test", rc="fail")
-    w.tests(image_structure_test=["OpenCL ICD loader", "POCL CPU ICD"])
+    w.tests(image_structure_test=["POCL CPU device", "POCL CPU ICD"])
     w.run("bazel run //labs:explain -- level3", expect="pocl.icd")
     w.say("task 1: the POCL layer")
     w.add_layer(b, "pocl_layer_img", "@pocl_apt//:flat",
@@ -673,7 +700,7 @@ def cmd_readme(_args):
 SLIDES = ROOT / "slides" / "slides.md"
 FENCE = re.compile(r"^\s*```(\w*)")
 RUNNABLE = ("bazel ", "docker ", "tar ")
-CD = "cd bazelcon-2026-workshop-docker-build && "  # we already run in the checkout
+CD = "cd bazelcon-2026-workshop-docker && "  # we already run in the checkout
 # Lines in a ```bash block that are real but must not run here, and why.
 SLIDE_SKIP = {
     "git clone ": "CI is already in the checkout",
@@ -748,20 +775,72 @@ def cmd_slides(args):
     return 1 if bad else 0
 
 
+# --- linux-images ------------------------------------------------------------
+ELF_MACHINE = {"amd64": 0x3E, "arm64": 0xB7}  # ELF e_machine
+
+
+def cmd_linux_images(args):
+    """Images are Linux whatever the host: //tools/platforms:defs.bzl's LINUX."""
+    import json
+    import platform
+    import tarfile
+
+    flags = "--platforms=//tools/platforms:macos_aarch64_simulated" if args.simulate_mac else ""
+    arch = "arm64" if args.simulate_mac or platform.machine() in ("arm64", "aarch64") else "amd64"
+    pkgs = ["//samples/...", "//labs/playground:all"] + [
+        "//%s/solution:all" % spec["dir"] for lab, spec in LABS.items() if lab != "playground"]
+    _, out = sh("%s query 'kind(image_manifest, %s)'" % (BAZEL, " + ".join(pkgs)))
+    images = [l for l in out.splitlines() if l.startswith("//")]
+    bad = []
+    rc, _ = sh("%s build %s %s" % (BAZEL, flags, " ".join(images)))
+    if rc != 0:
+        bad.append("the images don't build")
+    else:
+        # samples/distroless pins linux_amd64 on purpose (scratch: no base to follow).
+        pinned = {"//samples/distroless:image": "amd64"}
+        for image in images:
+            _, out = sh("%s cquery %s --output=files %s 2>/dev/null" % (BAZEL, flags, image))
+            cfg = next(l for l in out.splitlines() if l.endswith("_config.json"))
+            got = json.loads((ROOT / cfg).read_text())
+            want = pinned.get(image, arch)
+            if (got["os"], got["architecture"]) != ("linux", want):
+                bad.append("%s is %s/%s, wanted linux/%s" % (image, got["os"], got["architecture"], want))
+        # The bytes, not just the label: Level 1's interpreter and wheel.
+        _, out = sh("%s cquery %s --output=files 'kind(pkg_tar, deps(//labs/level1_buildtime/solution:image))' "
+                    "2>/dev/null" % (BAZEL, flags))
+        layer = next(l for l in out.splitlines() if l.endswith(".tar"))
+        with tarfile.open(ROOT / layer) as tar:
+            members = [m for m in tar.getmembers() if m.isfile() and
+                       m.name.endswith(("/bin/python3.12", "/_rust.abi3.so"))]
+            for m in members:
+                head = tar.extractfile(m).read(20)
+                if head[:4] != b"\x7fELF" or head[18] != ELF_MACHINE[arch]:
+                    bad.append("%s in %s is not a Linux %s binary" % (m.name, layer, arch))
+        if len(members) < 2:
+            bad.append("%s lacks the interpreter or the cryptography wheel" % layer)
+    for b in bad:
+        print("::error::%s" % b)
+    print("\n%s %d images are linux/%s" % ("✗" if bad else "✓", len(images), arch))
+    return 1 if bad else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("answers")
     a.add_argument("--changed", help="file listing changed paths")
     a.add_argument("--all", action="store_true", help="treat every lab as attempted")
+    a.add_argument("--base", help="revision to reset edited lab tests to (the fork point)")
     w = sub.add_parser("walkthrough")
     w.add_argument("lab", choices=sorted(WALKS))
+    li = sub.add_parser("linux-images")
+    li.add_argument("--simulate-mac", action="store_true", help="build as an Apple-silicon Mac would")
     sub.add_parser("readme")
     sl = sub.add_parser("slides")
     sl.add_argument("--run", action="store_true", help="also run every ```bash command")
     args = ap.parse_args()
     return {"answers": cmd_answers, "walkthrough": cmd_walkthrough, "readme": cmd_readme,
-            "slides": cmd_slides}[args.cmd](args)
+            "slides": cmd_slides, "linux-images": cmd_linux_images}[args.cmd](args)
 
 
 if __name__ == "__main__":

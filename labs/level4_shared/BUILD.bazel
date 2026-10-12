@@ -8,15 +8,12 @@ load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 load("@rules_runfiles_group//runfiles_group:runfiles_group_analysis_test.bzl", "runfiles_group_analysis_test")
+load("//tools/platforms:defs.bzl", "LINUX")
 load(":defs.bzl", "py_layered_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files([
-    "api.py",
-    "shared_test.py",
-    "worker.py",
-])
+exports_files(["shared_test.py"])
 
 # Two services that ship together: the api signs job tickets, the worker checks
 # them. Same interpreter, same cryptography wheel, different .py file.
@@ -92,6 +89,7 @@ image_manifest(
     base = image("python_base_img"),
     entrypoint = ["/app/api"],
     layers = [":api_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
     tags = ["manual"],
 )
 
@@ -100,6 +98,7 @@ image_manifest(
     base = image("python_base_img"),
     entrypoint = ["/app/worker"],
     layers = [":worker_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
     tags = ["manual"],
 )
 

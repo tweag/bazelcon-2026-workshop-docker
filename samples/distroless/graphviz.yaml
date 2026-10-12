@@ -1,4 +1,4 @@
-# Debian packages for the hermetic `dot` layer (TASK §2.9 / workshop Module 3).
+# Debian packages for the hermetic `dot` layer (workshop Module 3).
 #
 # Regenerate the lockfile after any change:
 #   bazel run @graphviz_apt//:lock

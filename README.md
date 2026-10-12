@@ -1,23 +1,26 @@
 # High Velocity Image Composition at Scale
 
-Workshop repo for the BazelCon 2026 talk [**"High Velocity Image Composition at Scale - Building with images with rules_img"**](https://events.linuxfoundation.org/bazelcon/features/training-day/#build-without-the-bytes-high-velocity-image-composition-at-scale) (see [`PROPOSAL.md`](PROPOSAL.md)).
+Workshop repo for the BazelCon 2026 talk [**"High Velocity Image Composition at Scale - Building with images with rules_img"**](https://events.linuxfoundation.org/bazelcon/features/training-day/#build-without-the-bytes-high-velocity-image-composition-at-scale).
 
 A single Bazel workspace that builds **both** the container-image samples and
 the Slidev presentation about them — the slides are a build artifact of the
 same graph that builds the images.
 
-📊 **Live deck:** https://tweag.github.io/bazelcon-2026-workshop-docker-build/
+📊 **Live deck:** https://tweag.github.io/bazelcon-2026-workshop-docker/
 — published from `main` by [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
 **once the repo is public** (GitHub Pages can't publish from a private free-tier
 repo; the workflow self-skips while private).
 📄 **PDF:** attached to every
-[release](https://github.com/tweag/bazelcon-2026-workshop-docker-build/releases/latest)
+[release](https://github.com/tweag/bazelcon-2026-workshop-docker/releases/latest)
 — built from that version's sources by [`.github/workflows/pdf.yml`](.github/workflows/pdf.yml),
 which also uploads it as a build artifact on every run. To make your own:
 `bazel run //slides:export_pdf`.
 
 ## Prerequisites
 
+- Linux or macOS. On Windows, use WSL2 and clone inside it: the labs'
+  `solution/app.py` files are symlinks, and a native Windows checkout without
+  `core.symlinks` turns them into one-line text files.
 - [Bazelisk](https://github.com/bazelbuild/bazelisk) (pins Bazel via `.bazelversion`)
 - The [GitHub CLI](https://cli.github.com) (`gh`), logged in with `gh auth login`,
   to fork and clone in one step. No `gh`? See the fallback under [Setup](#setup-do-this-before-you-arrive).
@@ -41,8 +44,8 @@ packages behind the hermetic layers, about 15 minutes and 600 MB, and leaves
 wifi, in a room of 60, that is not a five-minute lab. Do it on a good connection:
 
 ```bash
-gh repo fork tweag/bazelcon-2026-workshop-docker-build --clone -- --single-branch
-cd bazelcon-2026-workshop-docker-build
+gh repo fork tweag/bazelcon-2026-workshop-docker --clone -- --single-branch
+cd bazelcon-2026-workshop-docker
 bazel test //samples/... //labs/... //tools/...   # warms everything the labs need (all green)
 ```
 
@@ -51,7 +54,7 @@ the workshop repo as `upstream`. You work in your fork, so keep it **public**:
 that keeps GitHub Actions free. No `gh`? Fork on github.com, then clone your fork:
 
 ```bash
-git clone --single-branch --branch main https://github.com/<you>/bazelcon-2026-workshop-docker-build
+git clone --single-branch --branch main https://github.com/<you>/bazelcon-2026-workshop-docker
 ```
 
 To view the slides locally (optional):
@@ -130,7 +133,7 @@ bazel test //...                                          # everything, slides i
 | `slides/` | Slidev deck that transcludes the real sample sources |
 | `tools/` | `render_graph` (graph → PNG), `local_registry`, `local_cache`, `local_rbe` |
 
-## Reference
+## Read more
 
 **rules_img**, the ruleset this workshop teaches:
 
@@ -164,3 +167,15 @@ bazel test //...                                          # everything, slides i
 - [Bazel and Docker with rules_oci](https://www.youtube.com/watch?v=uFxh6rHfMKc), Alex Eagle (Aspect), Bazel Community Day 2023
 - [Talk on migrating off rules_docker](https://www.youtube.com/watch?v=rLDKcNv7xAY), linked from the deck's lineage slide
 - [tweag/bazel-workshop-2024](https://github.com/tweag/bazel-workshop-2024), Tweag's Bazel workshop from 2024
+
+## Credits
+
+The code and content are [MIT](LICENSE), except for these files, which belong to
+their owners:
+
+- `slides/images/bazelcon_color_alt.svg`: the BazelCon logo, a trademark of The Linux Foundation
+- `slides/images/tweag-logo.svg`: the Tweag logo, Modus Create LLC
+- `slides/images/talk-rules-oci.jpg` and `slides/images/talk-rules-img.jpg`: title cards of the
+  [Alex Eagle (Aspect)](https://www.youtube.com/watch?v=uFxh6rHfMKc) and
+  [Malte Poll (Tweag)](https://www.youtube.com/watch?v=biYXmAv4Ppk) talks, shown on the deck's lineage slide
+- `slides/fonts/`: Roboto, Google, under the Apache License 2.0 (see its [LICENSE.txt](slides/fonts/LICENSE.txt))

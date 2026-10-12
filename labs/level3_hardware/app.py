@@ -1,4 +1,4 @@
-"""Level 3 payload: an OpenCL kernel that needs an ICD (POCL on CPU, or a GPU)."""
+"""Level 3 payload: an OpenCL kernel that needs a device (an ICD): POCL, on the CPU."""
 
 import numpy as np
 
@@ -13,7 +13,7 @@ __kernel void add(__global const float *a,
 
 
 def has_opencl_device() -> bool:
-    """True only if an ICD exposes at least one device (POCL or a GPU)."""
+    """True only if an ICD exposes at least one device."""
     try:
         import pyopencl as cl
 
@@ -42,7 +42,7 @@ def vector_add(a, b):
 
 def main() -> int:
     if not has_opencl_device():
-        print("no OpenCL device — the hardware wall (bundle POCL or expose a GPU)")
+        print("no OpenCL device — the hardware wall (bundle POCL)")
         return 0
     c = vector_add([1, 2, 3], [10, 20, 30])
     print("vector_add on OpenCL OK:", c.tolist())

@@ -12,7 +12,8 @@ fileExistenceTests:
     shouldExist: true
 
 metadataTest:
-  # Task 2 — tesseract can't find its data without this pointer.
+  # Task 2 — the data path as explicit config, next to the file check above
+  # (without it, tesseract falls back to a default compiled into libtesseract).
   envVars:
     - key: "TESSDATA_PREFIX"
       value: "/usr/share/tesseract-ocr/5/tessdata/"

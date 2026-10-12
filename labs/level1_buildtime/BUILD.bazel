@@ -7,14 +7,11 @@ load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("//tools/platforms:defs.bzl", "LINUX")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files([
-    "app.py",
-    "app_test.py",
-    "layer_test.py",
-])
+exports_files(["layer_test.py"])
 
 py_binary(
     name = "app",
@@ -45,7 +42,7 @@ pkg_tar(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
-    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+    optimize = True,  # dedupe + zstd (see .bazelrc)
 )
 
 image_manifest(
@@ -53,6 +50,7 @@ image_manifest(
     base = image("python_base_img"),
     entrypoint = ["/app/app"],
     layers = [":app_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
     tags = ["manual"],
 )
 

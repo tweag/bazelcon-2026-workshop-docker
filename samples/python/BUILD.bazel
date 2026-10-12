@@ -10,6 +10,7 @@ load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+load("//tools/platforms:defs.bzl", "LINUX")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -39,7 +40,7 @@ compile_pip_requirements(
     requirements_txt = "requirements_lock.txt",
 )
 
-# --- The app, and its runfiles as one layer (TASK §2.9: granular, cacheable) --
+# --- The app, and its runfiles as one layer (granular, cacheable) ---------
 # The py_binary runfiles (hermetic interpreter + graphviz wheel + app.py) become
 # one declarative, content-addressed layer, so changing app.py rebuilds only this
 # layer and the base image layers are reused untouched.
@@ -50,9 +51,9 @@ compile_pip_requirements(
 py_binary(
     name = "app",
     srcs = ["app.py"],
-    imports = ["."],  # this package dir on sys.path -> `import app`
+    imports = ["."],  # so `import app` resolves
     main = "app.py",
-    deps = [requirement("graphviz")],  # <- the @pypi hub, from the lock
+    deps = [requirement("graphviz")],  # from the @pypi hub
 )
 
 pkg_tar(
@@ -63,7 +64,7 @@ pkg_tar(
 )
 #endregion
 
-# TASK §2.7 — unit test the payload independently of any image.
+# Unit test the payload independently of any image.
 py_test(
     name = "app_test",
     size = "small",
@@ -77,18 +78,19 @@ py_test(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
-    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+    optimize = True,  # dedupe + zstd (see .bazelrc)
 )
 
 image_manifest(
     name = "image",
     base = image("python_base_img"),
     entrypoint = [
-        "/app/app",  # py_binary launcher; finds app.runfiles
+        "/app/app",  # the py_binary launcher
         "--render",
         "/tmp/supply_chain.png",
     ],
     layers = [":app_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
 )
 #endregion
 
@@ -142,13 +144,13 @@ image_push(
     tag = "1h",
 )
 
-# TASK §2: prove the image assembles end to end (analysis + layer build).
+# Prove the image assembles end to end (analysis + layer build).
 build_test(
     name = "image_build_test",
     targets = [":image"],
 )
 
-# TASK §2.5 / Q3 — validate the image WITHOUT a daemon: the `tar` driver reads
+# Validate the image WITHOUT a daemon: the `tar` driver reads
 # the layers + config in the Bazel sandbox (no container runtime). image_load
 # exposes a "tarball" output group (docker-save + OCI-layout compatible).
 filegroup(

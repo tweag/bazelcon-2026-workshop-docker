@@ -1,0 +1,8 @@
+# Level 3, x86_64 images. BUILD.bazel picks this file by the image's CPU.
+schemaVersion: "2.0.0"
+
+fileExistenceTests:
+  # The device itself: what pocl.icd tells pyopencl's loader to open.
+  - name: "POCL CPU device (libpocl) is bundled"
+    path: "/usr/lib/x86_64-linux-gnu/libpocl.so.2"
+    shouldExist: true

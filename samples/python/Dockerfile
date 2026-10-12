@@ -1,4 +1,4 @@
-# The "before": a traditional, imperative Dockerfile build (TASK §2.2).
+# The "before": a traditional, imperative Dockerfile build.
 # Why it matters and how the Bazel variants compare: see samples/README.md.
 
 #region dockerfile

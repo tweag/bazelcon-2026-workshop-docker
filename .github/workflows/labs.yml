@@ -120,6 +120,7 @@ jobs:
           fi
           if [ -n "$base" ]; then
             git diff --name-only "$base" HEAD > /tmp/changed.txt
+            echo "LAB_BASE=$base" >> "$GITHUB_ENV"
           else
             : > /tmp/changed.txt
           fi
@@ -130,6 +131,8 @@ jobs:
           ALL: ${{ inputs.all }}
         run: |
           if [ "$ALL" = true ]; then set -- --all; fi
+          # Your edits to a lab's own tests are set aside: graded as shipped.
+          if [ -n "${LAB_BASE:-}" ]; then set -- "$@" --base "$LAB_BASE"; fi
           python3 labs/ci/labs_ci.py answers --changed /tmp/changed.txt "$@"
 
   # ------------------------------------------------------------- maintainer --
@@ -184,13 +187,13 @@ jobs:
             -c 'dot -c && /app/app --render /tmp/g.png' 2>&1 \
             | tee /dev/stderr | grep -q "rendered /tmp/g.png"
 
-      - name: Level 2 — the ghost is real, and OCR runs with no network
+      # OCR on /app/sample.png is ★ stretch A, so the solution doesn't ship
+      # it; the walkthrough job runs it from the README's answer.
+      - name: Level 2 — the ghost is real, with no network
         run: |
           set -euo pipefail
           bazel run //labs/level2_ghost/solution:image_load
-          docker run --rm bwb/level2-ghost | tee /dev/stderr | grep -q "^tesseract 5"
-          docker run --rm --network=none bwb/level2-ghost --ocr /app/sample.png \
-            | tee /dev/stderr | grep -q "HERMETIC OCR"
+          docker run --rm --network=none bwb/level2-ghost | tee /dev/stderr | grep -q "^tesseract 5"
 
       - name: Level 3 — a kernel runs on the CPU via POCL
         run: |
@@ -206,6 +209,34 @@ jobs:
           bazel run //labs/level4_shared/solution:worker_load
           docker run --rm --network=none bwb/level4-api | tee /dev/stderr | grep -q "^api: signed ticket"
           docker run --rm --network=none bwb/level4-worker | tee /dev/stderr | grep -q "^worker: ticket OK"
+
+  # A Mac must build Linux images with no extra flag (//tools/platforms:defs.bzl).
+  # The simulated run is a Linux runner building as an Apple-silicon Mac would;
+  # the real one adds what only a Mac has: its compiler, toolchains and tests.
+  mac-simulated:
+    name: a Mac gets Linux images (simulated)
+    needs: mode
+    if: needs.mode.outputs.maintainer == 'true'
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/labs-runner
+      - run: python3 labs/ci/labs_ci.py linux-images --simulate-mac
+
+  mac:
+    name: the setup works on a Mac
+    needs: mode
+    if: needs.mode.outputs.maintainer == 'true'
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    runs-on: macos-15  # Apple silicon; no Docker, so no `docker run` checks
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/labs-runner
+      - run: bazel test //labs/... //samples/...
+      - run: python3 labs/ci/labs_ci.py linux-images
 
   guide:
     name: the guide works

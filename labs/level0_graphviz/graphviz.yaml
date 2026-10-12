@@ -2,11 +2,19 @@
 # Re-lock after any change: bazel run @graphviz_lab_apt//:lock
 version: 1
 
+# Same snapshot as the base image's Debian (python_base_img in MODULE.bazel:
+# `debian.sh ... '@1781049600'`). This layer also ships libc6, libssl3 & co and
+# overwrites the base's copies, so an older snapshot would silently downgrade
+# them. Bump the base digest -> move this date to its debian.sh timestamp, re-lock.
 sources:
   - channel: bookworm main
     urls:
-      - https://snapshot-cloudflare.debian.org/archive/debian/20240210T223313Z
-      - https://snapshot.debian.org/archive/debian/20240210T223313Z
+      - https://snapshot-cloudflare.debian.org/archive/debian/20260610T000000Z
+      - https://snapshot.debian.org/archive/debian/20260610T000000Z
+  - channel: bookworm-security main
+    urls:
+      - https://snapshot-cloudflare.debian.org/archive/debian-security/20260610T000000Z
+      - https://snapshot.debian.org/archive/debian-security/20260610T000000Z
 
 archs:
   - "amd64"

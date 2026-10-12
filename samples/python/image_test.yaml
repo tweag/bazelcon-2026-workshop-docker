@@ -1,4 +1,4 @@
-# Daemonless image validation (workshop Q3 / TASK §2.5).
+# Daemonless image validation.
 # Run with the `tar` driver — no container runtime, no Docker daemon: the test
 # inspects the image's layers and config directly in the Bazel sandbox.
 schemaVersion: "2.0.0"

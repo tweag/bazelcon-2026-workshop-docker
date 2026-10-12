@@ -1,6 +1,7 @@
 # Level 2 — reference solution (green). The fills vs. the skeleton: the apt
 # layer (the real engine + data) and the TESSDATA_PREFIX pointer. No RUN, no
-# daemon, no network — the layer is pinned in tesseract.lock.json.
+# daemon, no network — the layer is pinned in tesseract.lock.json. The ★
+# stretches are left as in the skeleton.
 load("@container_structure_test//:defs.bzl", "container_structure_test")
 load("@labs_pypi//:requirements.bzl", "requirement")
 load("@rules_img//img:image.bzl", "image_manifest")
@@ -9,8 +10,7 @@ load("@rules_img//img:load.bzl", "image_load")
 load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
-
-package(default_visibility = ["//visibility:public"])
+load("//tools/platforms:defs.bzl", "LINUX")
 
 py_binary(
     name = "app",
@@ -23,34 +23,34 @@ py_binary(
     ],
 )
 
-# Same payload test as the skeleton's, so `bazel test //labs/...` (and CI)
-# actually exercises it.
+# Task 0 (green) — proves in pure Python that the engine binary is missing.
 py_test(
     name = "app_test",
     size = "small",
-    srcs = ["//labs/level2_ghost:app_test.py"],
-    imports = [".."],  # srcs from the parent package land in ../, not here
-    main = "app_test.py",
+    srcs = ["app_test.py"],
+    imports = ["."],
     deps = [":app"],
 )
 
-# The stretch fill: ship something to actually OCR, so the image can prove the
-# engine works rather than just prove the binary is present.
-#   docker run --rm bwb/level2-ghost --ocr /app/sample.png   ->  HERMETIC OCR
+# TODO(stretch): add "sample.png" to srcs, then OCR it with docker run.
 pkg_tar(
     name = "app_layer",
-    srcs = [
-        ":app",
-        "//labs/level2_ghost:sample.png",
-    ],
+    srcs = [":app"],
     include_runfiles = True,
     package_dir = "/app",
 )
 
-layer_from_tar(name = "app_layer_img", src = ":app_layer", optimize = True)
+layer_from_tar(
+    name = "app_layer_img",
+    src = ":app_layer",
+    optimize = True,  # dedupe + zstd (see .bazelrc)
+)
 
-# The fill: wrap the hermetic engine + data tar as a layer.
-layer_from_tar(name = "tesseract_layer_img", src = "@tesseract_apt//:flat")
+# Task 1: the hermetic engine + eng data, as a layer.
+layer_from_tar(
+    name = "tesseract_layer_img",
+    src = "@tesseract_apt//:flat",
+)
 
 image_manifest(
     name = "image",
@@ -59,8 +59,9 @@ image_manifest(
     env = {"TESSDATA_PREFIX": "/usr/share/tesseract-ocr/5/tessdata/"},  # task 2
     layers = [
         ":app_layer_img",
-        ":tesseract_layer_img",  # the hermetic engine + eng data
+        ":tesseract_layer_img",  # task 1
     ],
+    platform = LINUX,  # a Linux image, even on a Mac
 )
 
 image_load(
@@ -75,6 +76,7 @@ filegroup(
     output_group = "tarball",
 )
 
+# Tasks 1–2 — daemonless (tar driver). Red until the layer + env are added.
 container_structure_test(
     name = "image_structure_test",
     size = "medium",

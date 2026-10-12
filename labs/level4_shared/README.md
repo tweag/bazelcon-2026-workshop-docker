@@ -6,9 +6,36 @@ deck's recipe, `pkg_tar(include_runfiles = True)`, packs everything into **one
 tar**. That's simple, but two services built that way share nothing above the
 base. Here you split the binary into layers by **volatility** instead.
 
+```mermaid
+flowchart LR
+  subgraph today["Today: one tar per service"]
+    a1["api image<br/>base + 41 MB tar"]
+    w1["worker image<br/>base + 41 MB tar"]
+  end
+  subgraph goal["Goal: one layer per group"]
+    interp["interpreter"] --> a2["api image"]
+    tp["third_party wheels"] --> a2
+    interp --> w2["worker image"]
+    tp --> w2
+    aa["app: api.py"] --> a2
+    wa["app: worker.py"] --> w2
+  end
+```
+
 **Deck concepts:** split layers by volatility (catering) · content addressing:
 same bytes, same digest · shared layers dedupe · the cost of "one tar → one
 layer". Do Level 1 first. This lab assumes you know `pkg_tar` → `layer_from_tar`.
+
+```mermaid
+flowchart TD
+  bin[":api<br/>py_binary"] --> tar[":api_layer<br/>pkg_tar"] --> layer[":api_layer_img<br/>layer_from_tar"] --> image[":image_api<br/>image_manifest"]
+  bin --> lb[":api_layered<br/>py_layered_binary"]
+  lb -. "TODO task 1: layer_from_binary" .-> image
+  lb --> t0(["groups_test<br/>Task 0: green"])
+  image --> m[":api_manifest"] --> t1(["shared_layers_test<br/>Task 1: api + worker"])
+```
+
+`:worker` → … → `:image_worker` has the same shape.
 
 ## Start
 
@@ -16,19 +43,20 @@ layer". Do Level 1 first. This lab assumes you know `pkg_tar` → `layer_from_ta
 bazel test //labs/level4_shared:shared_layers_test   # starts RED
 ```
 
-No install? Edit in a fork and let GitHub check it: see
-[Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
-
 You only edit [`BUILD.bazel`](BUILD.bazel). Look for the `# TODO`. The splitting
 rule is already written for you in [`defs.bzl`](defs.bzl), and reading it is
 part of the lab.
+
+> [!TIP]
+> No install? Edit in a fork and let GitHub check it: see
+> [Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
 
 ## Tasks
 
 | # | Run | Starts | Done when |
 |---|---|---|---|
 | 0 | `bazel test //labs/level4_shared:groups_test` | 🟢 | read it: the three groups add up to exactly the binary's runfiles |
-| 1 | `bazel test //labs/level4_shared:shared_layers_test` | 🔴 | the worker image adds less than 1 MB to the api image |
+| 1 | `bazel test //labs/level4_shared:shared_layers_test` | 🔴 | each image adds only its own app layer (< 1 MB) to the other |
 | ★ | `bazel run //labs/level4_shared:api_load && docker run --rm bwb/level4-api` | – | both services run from the shared layers (needs Docker) |
 
 ### Task 0 — three groups instead of one
@@ -50,8 +78,9 @@ real files, so no group can hold them, and Python 3 doesn't need them.
 
 ### Task 1 — one layer per group
 
-`shared_layers_test` reads the two image manifests, without a daemon, and fails
-with the bytes the worker adds on top of the api:
+`shared_layers_test` reads the two image manifests, without a daemon. It wants
+exactly one small layer per image that the other lacks (its app code), and
+starts red with the bytes the worker adds on top of the api:
 
 ```
 The worker image adds 41.0 MB on top of the api image, in 1 layer(s):

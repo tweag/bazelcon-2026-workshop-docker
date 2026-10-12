@@ -30,6 +30,17 @@ ENTRYPOINT ["python", "/app/app.py", "--render", "/tmp/supply_chain.png"]
 tag · the system dep becomes pinned bytes · the entrypoint is a launcher ·
 daemonless validation.
 
+```mermaid
+flowchart TD
+  lock["graphviz.yaml<br/>+ graphviz.lock.json"] --> flat["@graphviz_lab_apt//:flat"]
+  flat -. "TODO task 2: dot layer" .-> image[":image<br/>image_manifest"]
+  base["python_base_img"] -. "TODO task 1: base + entrypoint" .-> image
+  sample["//samples/python:app_layer<br/>done for you"] --> applayer[":app_layer_img<br/>layer_from_tar"]
+  applayer --> image
+  image --> tar[":image.tar<br/>image_load tarball"]
+  tar --> t1(["image_structure_test<br/>Tasks 1–2"])
+```
+
 ## Start
 
 ```bash
@@ -37,12 +48,13 @@ bazel test //labs/level0_graphviz:image_structure_test   # starts RED (3 checks)
 bazel run  //labs:explain -- level0                       # decodes the bare "FAIL"
 ```
 
-No install? Edit in a fork and let GitHub check it: see
-[Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
-
 You only edit [`BUILD.bazel`](BUILD.bazel). Look for the `# TODO`s. The app
 layer is done for you: it's the deck's own `//samples/python:app_layer`,
 unchanged. The checks live in [`image_test.yaml`](image_test.yaml).
+
+> [!TIP]
+> No install? Edit in a fork and let GitHub check it: see
+> [Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
 
 | Dockerfile | → | Bazel |
 |---|---|---|
@@ -80,6 +92,7 @@ image_manifest(
         "/tmp/supply_chain.png",
     ],
     layers = [":app_layer_img"],
+    platform = LINUX,  # already there: a Linux image, even on a Mac
 )
 ```
 </details>

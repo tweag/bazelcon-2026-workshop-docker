@@ -3,7 +3,8 @@ updates:
   # Keep the workflow actions current (this is what avoids the "Node.js action
   # deprecated" warnings recurring).
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" alone only covers .github/workflows; the composite action needs its own.
+    directories: ["/", "/.github/actions/*"]
     schedule:
       interval: "weekly"
     commit-message:

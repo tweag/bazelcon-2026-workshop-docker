@@ -70,7 +70,7 @@ layoutClass: gap-6 lab-card
 
 # Grab your fork: the lab card
 
-Every module ends on a **Lab** slide: the problem, the commands, and what "done" looks like. First, **fork** [tweag/bazelcon-2026-workshop-docker-build](https://github.com/tweag/bazelcon-2026-workshop-docker-build) and keep it **public**: you work in your fork either way. Then pick one way in, **now**.
+Every module ends on a **Lab** slide: the problem, the commands, and what "done" looks like. First, **fork** [tweag/bazelcon-2026-workshop-docker](https://github.com/tweag/bazelcon-2026-workshop-docker) and keep it **public**: you work in your fork either way. Then pick one way in, **now**.
 
 ::left::
 
@@ -79,13 +79,11 @@ Every module ends on a **Lab** slide: the problem, the commands, and what "done"
 Needs [Bazelisk](https://github.com/bazelbuild/bazelisk), [`gh`](https://cli.github.com) (after `gh auth login`) and a C compiler. No compiler? Add `--config=hermetic-cc` and Bazel brings its own. Docker is optional.
 
 ```bash
-gh repo fork tweag/bazelcon-2026-workshop-docker-build \
-    --clone -- --single-branch && \
-cd bazelcon-2026-workshop-docker-build && \
+gh repo fork tweag/bazelcon-2026-workshop-docker \
+    --clone -- --single-branch
+cd bazelcon-2026-workshop-docker && \
 bazel test //samples/... //labs/... //tools/...
 ```
-
-No `gh`? Fork on github.com, then `git clone --single-branch --branch main` your fork's URL.
 
 <div class="lab-stuck">
 
@@ -95,7 +93,6 @@ Start it **before we begin**: ~15 min and ~600 MB, once. Bazel fetches its own p
 
 <div class="lab-stuck">
 
-<!-- IMAGE: slides/images/repo-qr.png — QR for the repo URL, to sit left of this line -->
 Want more? Every level in `labs/` has ★ stretch tasks: `bazel run //labs:progress` points to each one.
 
 </div>
@@ -167,7 +164,7 @@ The recipe is pure Python — but it names its own pan. Three ingredients: **app
 source**, **pip deps**, and a **system layer** (the `dot` binary) that `pip` will
 never install for you.
 
-<<< ../samples/python/app.py#recipe python {*}{maxHeight:'230px'}
+<<< ../samples/python/app.py#recipe python[samples/python/app.py]
 
 <div class="mt-3 opacity-80 text-sm">
 
@@ -200,7 +197,7 @@ Tasty maybe, but never reproducible: each `RUN` grabs *today's* ingredients.
 
 <div class="code-pin">
 
-<<< ../samples/python/Dockerfile#dockerfile docker {4-6}
+<<< ../samples/python/Dockerfile#dockerfile docker[samples/python/Dockerfile] {4-6}
 
 </div>
 
@@ -320,9 +317,9 @@ a pinned Python interpreter, the wheels and 162 `.deb`s, all checked by sha256.
 That's the slow part, so **start it now** and let it run while we talk.
 
 ```bash
-gh repo fork tweag/bazelcon-2026-workshop-docker-build \
+gh repo fork tweag/bazelcon-2026-workshop-docker \
     --clone -- --single-branch
-cd bazelcon-2026-workshop-docker-build
+cd bazelcon-2026-workshop-docker
 bazel test //samples/... //labs/... //tools/...   # the lab card's setup; not //...
 
 bazel test //samples/... //labs/... //tools/...   # again: nothing left to do
@@ -388,13 +385,14 @@ binary**. The `graphviz` package is a thin wrapper that *shells out* to it:
 <div class="grid grid-cols-2 gap-6 mt-4 code-sm">
 <div>
 
-<<< ../samples/python/app.py#render python
+<<< ../samples/python/app.py#render python[samples/python/app.py]
 
 </div>
 <div>
 
 ```console
-$ bazel run //samples/python:app -- --render /tmp/supply_chain.png
+$ bazel run //samples/python:app -- \
+    --render /tmp/supply_chain.png
 // Building Without Bytes
 digraph supply_chain { … }
 
@@ -426,7 +424,7 @@ to become an **explicit layer** — the "special pan" we now have to pack.
 - **No daemon** — no socket, nothing privileged, nothing to keep running.
 - **Built for a remote cache and remote execution** — a layer is an ordinary Bazel
   action, so it builds on **RBE** workers and lands in the **shared cache**: built
-  once, never rebuilt or re-downloaded anywhere. *(Module 4.)*
+  once, never rebuilt or re-downloaded anywhere.
 
 ---
 
@@ -447,7 +445,7 @@ FROM python:3.12-slim-bookworm@sha256:76d4b7b6305788c6b4c6a19d6a22a3921bf802e9af
 
 <div class="code-pin" style="--pin: '◀ the pin: bytes, not a tag'">
 
-<<< ../MODULE.bazel#base_pull python {7}
+<<< ../MODULE.bazel#base_pull python[MODULE.bazel] {7}
 
 </div>
 
@@ -471,7 +469,7 @@ base's blobs are fetched only when something actually needs them.)
 
 # The system dep becomes pinned bytes
 
-<div class="xlate mt-6">
+<div class="xlate xlate-wide-right mt-6">
 <div>
 
 ```docker
@@ -481,11 +479,11 @@ RUN apt-get update \
 
 </div>
 <div class="xlate-arrow">→</div>
-<div>
+<div class="code-sm">
 
-<<< ../MODULE.bazel#apt_ext python
+<<< ../MODULE.bazel#apt_ext python[MODULE.bazel]
 
-<<< ../samples/distroless/BUILD.bazel#apt_layer python
+<<< ../samples/distroless/BUILD.bazel#apt_layer python[samples/distroless/BUILD.bazel]
 
 </div>
 </div>
@@ -511,7 +509,7 @@ here you pin **bytes**.*
 
 # Four steps, one layer
 
-<div class="xlate xlate-top mt-4 code-sm">
+<div class="xlate xlate-top xlate-wide-right mt-4 code-sm">
 <div>
 
 ```docker
@@ -537,9 +535,9 @@ interpreter ＋ wheel ＋ `app.py` — into **one tar → one layer**.
 <div class="xlate-arrow">→</div>
 <div>
 
-<<< ../MODULE.bazel#pip_hub python
+<<< ../MODULE.bazel#pip_hub python[MODULE.bazel]
 
-<<< ../samples/python/BUILD.bazel#pip_layer python
+<<< ../samples/python/BUILD.bazel#pip_layer python[samples/python/BUILD.bazel]
 
 </div>
 </div>
@@ -550,7 +548,7 @@ interpreter ＋ wheel ＋ `app.py` — into **one tar → one layer**.
 
 # The entrypoint is a launcher
 
-<div class="xlate mt-8">
+<div class="grid grid-cols-2 gap-8 mt-6 items-center">
 <div>
 
 ```docker
@@ -558,16 +556,14 @@ ENTRYPOINT ["python", "/app/app.py",
             "--render", "/tmp/supply_chain.png"]
 ```
 
-</div>
-<div class="xlate-arrow">→</div>
-<div>
+<div class="xlate-arrow">↓</div>
 
 ```python
 image_manifest(
     name = "image",
     base = image("python_base_img"),
     entrypoint = [
-        "/app/app",              # py_binary bootstrap launcher
+        "/app/app",  # the py_binary launcher
         "--render", "/tmp/supply_chain.png",
     ],
     layers = [":app_layer_img"],
@@ -575,17 +571,17 @@ image_manifest(
 ```
 
 </div>
+<div>
+
+**No `python` in the entrypoint.** Three rules split the work:
+
+- `py_binary` **builds** the launcher: `/app/app` finds `app.runfiles` and execs the hermetic interpreter
+- `pkg_tar(include_runfiles = True)` **ships** it into a layer
+- `rules_img` only **points** at it: `entrypoint` is a field in the OCI config JSON
+
+Declare, don't run. `env = {…}` is the same: an attribute, not a step.
+
 </div>
-
-<div class="mt-5 text-center">
-
-Look again: **no `python`** — `/app/app` finds `app.runfiles` and execs the
-*hermetic* interpreter that shipped in the layer. But `rules_img` didn't *make*
-that launcher: `py_binary` did, and `pkg_tar(include_runfiles = True)` shipped
-it. `entrypoint` is only a field in the image's **OCI config JSON** — a pointer
-at a file already sitting in a layer. Declare, don't run. (`ENV` goes the same
-way: `env = {…}`, an attribute, not a step.)
-
 </div>
 
 ---
@@ -630,7 +626,7 @@ Dockerfile directive for *"send this to a registry"*.
 
 <div class="code-sm">
 
-<<< ../samples/python/BUILD.bazel#image python {*}{maxHeight:'300px'}
+<<< ../samples/python/BUILD.bazel#image python[samples/python/BUILD.bazel]
 
 </div>
 
@@ -777,7 +773,7 @@ Take the base OS away and keep only the filling. It works because `apt.install`
 already resolved `dot` at **load** time into content-addressed layers — no `RUN`
 is left that needs an OS underneath it:
 
-<<< ../samples/distroless/BUILD.bazel#distroless python {*}{maxHeight:'200px'}
+<<< ../samples/distroless/BUILD.bazel#distroless python[samples/distroless/BUILD.bazel]
 
 <div class="mt-2 opacity-80 text-sm">
 
@@ -788,7 +784,7 @@ scanners read. The `dot` from Module 0, now a **hermetic, pinned** layer on `scr
 </div>
 
 <img src="./images/sandwich-no-bread.png"
-     class="w-full h-auto object-contain mt-2"
+     class="w-full h-auto max-h-[118px] object-contain mt-1"
      alt="an exploded party sub running the full width: one very long hero roll split lengthwise, its top and bottom halves lifted away above and below, leaving a single unbroken run of filling — cured meats, cheese, tomato, cucumber, lettuce and herbs — down the centre" />
 
 ---
@@ -805,11 +801,13 @@ service's own app layer differs.
 
 <div class="code-sm">
 
-<<< ../samples/shared_layers/BUILD.bazel#shared python {*}{maxHeight:'250px'}
+<<< ../samples/shared_layers/BUILD.bazel#shared python[samples/shared_layers/BUILD.bazel]
 
 </div>
 
 ::right::
+
+<div class="code-sm">
 
 ```bash
 bazel run \
@@ -819,6 +817,8 @@ bazel run \
 #  sha256:…  common config/lib
 # + 1 unique app layer each
 ```
+
+</div>
 
 Any **byte-identical** layer dedupes automatically — prep once, plate twice.
 
@@ -1119,6 +1119,7 @@ class: text-center
 # Takeaways
 
 **Declare, don't script** — a layer is a build output, not a step a daemon runs.<br>
+**It's never *just* Python** — `graphviz` shells out to `dot`; declare the system deps, or a Dockerfile hides them.<br>
 **Split by volatility** — layers build **in parallel**, identical ones **dedupe**<br>
 **Go daemonless** — assemble, validate and push with no socket, nothing privileged.<br>
 **Share the pantry** — a **remote cache** ＋ **RBE** rebuilds nothing, and moves only missing blobs.<br>
@@ -1160,7 +1161,7 @@ This workshop stands on a lot of shoulders.
 
 <div class="opacity-70 mt-6">
 
-github.com/tweag/bazelcon-2026-workshop-docker-build
+github.com/tweag/bazelcon-2026-workshop-docker
 
 </div>
 
@@ -1169,7 +1170,7 @@ layout: section
 ---
 
 # Appendix
-<div class="opacity-60">If time / backup · why no <code>RUN</code> · testing without a daemon · looking inside an image · lazy push · what hermetic still borrows · coming from <code>rules_oci</code></div>
+<div class="opacity-60">If time / backup · why no <code>RUN</code> · testing without a daemon · looking inside an image · lazy push · what hermetic still borrows · how the plates were made · coming from <code>rules_oci</code></div>
 
 <!-- IMAGE (divider motif, small/corner): slides/images/divider-tasting-spoon.png — a chef tasting from a spoon (quality check) -->
 
@@ -1265,7 +1266,7 @@ time — every time.
 **files and config in the Bazel sandbox** — no runtime — and fans out in parallel.
 (`container_structure_test` — GoogleContainerTools; a community project.)
 
-<<< ../samples/python/image_test.yaml yaml {*}{maxHeight:'190px'}
+<<< ../samples/python/image_test.yaml yaml[samples/python/image_test.yaml] {*}{maxHeight:'210px'}
 
 ```python
 container_structure_test(name = "image_structure_test",
@@ -1274,7 +1275,7 @@ container_structure_test(name = "image_structure_test",
 
 ---
 layout: two-cols-header
-layoutClass: gap-x-6 gap-y-3 !grid-cols-[3fr_2fr]
+layoutClass: gap-x-6 gap-y-0 !grid-cols-[3fr_2fr]
 ---
 
 <div class="step-kicker opacity-55">test</div>
@@ -1297,7 +1298,7 @@ $ docker run --rm bwb/level2-ghost
 exec /app/app: no such file or directory
 ```
 
-<<< ../MODULE.bazel#mergedusr python
+<<< ../MODULE.bazel#mergedusr python[MODULE.bazel]
 
 </div>
 
@@ -1310,7 +1311,8 @@ exec /app/app: no such file or directory
 ```bash
 # 1 · what is actually in this layer?
 bazel build //labs/level2_ghost:app_layer
-tar tf bazel-bin/labs/level2_ghost/app_layer.tar
+tar tf \
+  bazel-bin/labs/level2_ghost/app_layer.tar
 
 # 2 · why is a test red? decode the
 #     structure test's bare FAIL
@@ -1344,7 +1346,7 @@ bazel-bin/samples/python/image_sparse_oci_layout/
 
 <div class="code-sm">
 
-<<< ../samples/python/BUILD.bazel#oci_layout python
+<<< ../samples/python/BUILD.bazel#oci_layout python[samples/python/BUILD.bazel]
 
 </div>
 
@@ -1386,7 +1388,7 @@ all, taking `image.tar` from **82 MB** to **742 KB**.
 
 # Lazy push, straight from a remote cache
 
-With a remote cache (Module 4), **lazy** push (`strategy = "lazy"`) skips the runfiles
+With a remote cache, **lazy** push (`strategy = "lazy"`) skips the runfiles
 and streams blobs **straight from the remote cache** to the registry — the win
 when images are huge or numerous.
 
@@ -1453,6 +1455,44 @@ tool that happens to be on the host. Building this workshop turned up five:
 Remote execution, or a machine with **nothing installed**, is how you find the
 rest. `gawk` only writes `/var/lib/dpkg/status`, so the image digest is the same
 with either compiler.
+
+</div>
+
+---
+
+# How the plates were made
+
+The illustrations are the one part of this deck that `bazel build` doesn't produce.
+
+<div class="mt-5 text-center">
+
+**slide claim ＋ intent** → **house-style prompt** → **image model** → **agent review** → **cleanup** → **author feedback** ↺
+
+</div>
+
+<div class="grid grid-cols-2 gap-8 mt-5 text-sm">
+<div>
+
+### Reviewed like code
+The agent checks each plate against the claim on its slide: does the croque plate
+really show *one* shared stack? Then the author signs off, or the prompt goes
+round again.
+
+</div>
+<div>
+
+### Cleaned by hand, not by a target
+An image model can't emit real transparency: ask for it and it *paints* a
+checkerboard. So each plate is drawn on flat magenta and keyed to alpha
+afterwards, a step no target runs.
+
+</div>
+</div>
+
+<div class="mt-5 opacity-80 text-center">
+
+The output isn't reproducible, so the PNGs are committed as **sources**, like the
+two talk title cards. The deck and its PDF are built from them.
 
 </div>
 

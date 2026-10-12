@@ -114,6 +114,39 @@
   background: var(--bc-bg-soft);
 }
 
+/* Source path on a transcluded snippet (`<<< file#region lang[path]`): a slim
+ * tab on the frame so attendees can find it in their clone. Kept short —
+ * every pixel it takes comes out of the code below. */
+.slidev-layout .slidev-code-block-title {
+  width: fit-content;
+  padding: 0.1rem 0.6rem;
+  font-family: var(--slidev-code-font-family, monospace);
+  font-size: 0.6rem;
+  line-height: 1.4;
+  color: var(--bc-forest);
+  background:                                  /* opaque: it's sticky */
+    linear-gradient(rgba(124, 179, 66, 0.22), rgba(124, 179, 66, 0.22)),
+    var(--bc-bg-soft);
+  border-left: 4px solid var(--bc-lime);
+  border-radius: 6px 6px 0 0;
+  box-shadow: none;
+  /* A maxHeight block scrolls to its first highlighted line, which would
+   * otherwise scroll the tab out of view. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+/* …and that scroll should stop below the tab, not under it. */
+.slidev-layout .slidev-code-wrapper:has(> .slidev-code-block-title) {
+  scroll-padding-top: 1.4rem;
+}
+/* Slidev adds a file-type icon only for extensions it knows; drop it so every
+ * tab looks the same. */
+.slidev-layout .slidev-code-block-title > :not(.leading-1em) { display: none; }
+.slidev-layout .slidev-code-block-title + pre.slidev-code {
+  border-top-left-radius: 0;
+}
+
 /* Code sits on cream even in dark mode — use the light theme's token colours. */
 html.dark .slidev-code span {
   color: var(--shiki-light) !important;
@@ -365,6 +398,9 @@ html.dark .slidev-code span {
  * regions), so its takeaway moves into the left column's dead space instead of
  * sitting under the grid — which means the columns align to the top, not centre. */
 .xlate-top { align-items: start; }
+/* Long transcluded Starlark on the right (a `use_extension(...)` line can't be
+ * wrapped), a few short Dockerfile lines on the left: give the right more room. */
+.xlate-wide-right { grid-template-columns: 9fr auto 14fr; gap: 1rem; }
 .xlate-none {
   text-align: center;
   font-size: 1.35rem;

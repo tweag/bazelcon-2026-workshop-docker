@@ -1,4 +1,4 @@
-"""Unit tests for the Graphviz sample app (TASK §2.7).
+"""Unit tests for the Graphviz sample app.
 
 Verifies the thing being containerized independently of any image, using only
 pure-Python behavior (no `dot` binary required).

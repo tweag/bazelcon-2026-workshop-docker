@@ -22,7 +22,7 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 bazel_dep(name = "container_structure_test", version = "1.22.1")
 
-# Node/JS toolchain for the hermetic Slidev deck build (TASK §3.8, Phase 1).
+# Node/JS toolchain for the hermetic Slidev deck build.
 bazel_dep(name = "aspect_rules_js", version = "3.2.3")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 
@@ -115,6 +115,16 @@ python.toolchain(
 ]
 use_repo(python)
 
+# Wheels for the host (tests, `bazel run`) and for Linux on both CPUs (images:
+# see //tools/platforms:defs.bzl). Without the Linux pair a Mac has no wheel to
+# put in a Linux image. The default is the host only.
+WHEEL_PLATFORMS = [
+    "linux_x86_64",
+    "linux_aarch64",
+    "osx_x86_64",
+    "osx_aarch64",
+]
+
 # The deck transcludes the region below: slides/slides.md `<<< ../MODULE.bazel#pip_hub`.
 #region pip_hub
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
@@ -122,20 +132,22 @@ pip.parse(
     hub_name = "pypi",
     python_version = "3.12",
     requirements_lock = "//samples/python:requirements_lock.txt",
+    target_platforms = WHEEL_PLATFORMS,  # host + Linux, for images
 )
 #endregion
 use_repo(pip, "pypi")
 
-# Lab payloads for the self-guided labs (TASK §10), kept in their own hub so
+# Lab payloads for the self-guided labs, kept in their own hub so
 # they don't bloat the samples' deps. Re-lock: bazel run //labs:requirements.update
 pip.parse(
     hub_name = "labs_pypi",
     python_version = "3.12",
     requirements_lock = "//labs:requirements_lock.txt",
+    target_platforms = WHEEL_PLATFORMS,
 )
 use_repo(pip, "labs_pypi")
 
-# --- Node toolchain + npm deps for the Slidev deck (hermetic, TASK §3.8) ---
+# --- Node toolchain + npm deps for the Slidev deck (hermetic) ---
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "24.13.0")  # matches slides/.nvmrc "24"
 use_repo(node, "nodejs_toolchains")
@@ -212,15 +224,15 @@ use_repo(apt, "graphviz_apt")
 # The deck transcludes the region below: slides/slides.md
 # `<<< ../MODULE.bazel#mergedusr` — keep it tight, it shares a two-column slide.
 #region mergedusr
-# `mergedusr` is what makes an apt layer safe to stack ON TOP OF a distro base.
-# Debian's .debs ship files under /lib; the base has /lib as a SYMLINK into
-# /usr. Layering a real directory over a symlink REPLACES it, which silently
-# amputates the base's /usr/lib — every binary then fails to exec.
+# `mergedusr` makes an apt layer safe to stack on a distro base.
+# .debs ship files under /lib, but the base's /lib is a SYMLINK
+# into /usr: a real directory layered on top REPLACES it, and
+# every binary then fails to exec.
 apt.install(
     name = "tesseract_apt",
     lock = "//labs/level2_ghost:tesseract.lock.json",
     manifest = "//labs/level2_ghost:tesseract.yaml",
-    mergedusr = True,  # rewrites ./lib -> ./usr/lib so the layers compose
+    mergedusr = True,  # ./lib -> ./usr/lib, so layers compose
 )
 #endregion
 use_repo(apt, "tesseract_apt")

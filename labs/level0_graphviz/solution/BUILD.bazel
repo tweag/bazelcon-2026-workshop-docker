@@ -5,18 +5,19 @@ load("@rules_img//img:image.bzl", "image_manifest")
 load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img//img:load.bzl", "image_load")
 load("@rules_img_images.bzl", "image")
+load("//tools/platforms:defs.bzl", "LINUX")
 
-package(default_visibility = ["//visibility:public"])
-
+# Done for you: the deck's payload (py_binary + pip wheel + app.py), unchanged.
 layer_from_tar(
     name = "app_layer_img",
     src = "//samples/python:app_layer",
-    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+    optimize = True,  # dedupe + zstd (see .bazelrc)
 )
 
+# Task 2: RUN apt-get install graphviz, as a pinned layer.
 layer_from_tar(
     name = "graphviz_layer_img",
-    src = "@graphviz_lab_apt//:flat",  # task 2: RUN apt-get install graphviz
+    src = "@graphviz_lab_apt//:flat",
 )
 
 image_manifest(
@@ -29,8 +30,9 @@ image_manifest(
     ],
     layers = [
         ":app_layer_img",
-        ":graphviz_layer_img",
+        ":graphviz_layer_img",  # task 2
     ],
+    platform = LINUX,  # a Linux image, even on a Mac
 )
 
 image_load(
@@ -45,6 +47,7 @@ filegroup(
     output_group = "tarball",
 )
 
+# Tasks 1–2 — daemonless (tar driver). Red until base, entrypoint and dot are in.
 container_structure_test(
     name = "image_structure_test",
     size = "medium",

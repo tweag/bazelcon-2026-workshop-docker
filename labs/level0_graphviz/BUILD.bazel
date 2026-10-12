@@ -5,6 +5,7 @@ load("@rules_img//img:image.bzl", "image_manifest")
 load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img//img:load.bzl", "image_load")
 load("@rules_img_images.bzl", "image")  # buildifier: disable=load
+load("//tools/platforms:defs.bzl", "LINUX")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -18,7 +19,7 @@ exports_files([
 layer_from_tar(
     name = "app_layer_img",
     src = "//samples/python:app_layer",
-    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+    optimize = True,  # dedupe + zstd (see .bazelrc)
 )
 
 # TODO(task 2): wrap "@graphviz_lab_apt//:flat" in a layer_from_tar.
@@ -27,6 +28,7 @@ image_manifest(
     # TODO(task 1): translate FROM and ENTRYPOINT from samples/python/Dockerfile.
     # TODO(task 2): add the dot layer to layers.
     layers = [":app_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
 )
 
 image_load(

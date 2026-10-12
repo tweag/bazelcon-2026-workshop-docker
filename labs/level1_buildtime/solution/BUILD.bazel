@@ -7,17 +7,17 @@ load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
-
-package(default_visibility = ["//visibility:public"])
+load("//tools/platforms:defs.bzl", "LINUX")
 
 py_binary(
     name = "app",
     srcs = ["app.py"],
     imports = ["."],
     main = "app.py",
-    deps = [requirement("cryptography")],  # <- the fill: prebuilt wheel
+    deps = [requirement("cryptography")],  # task 1: the prebuilt wheel
 )
 
+# Task 1 — green once :app can import cryptography.
 py_test(
     name = "app_test",
     size = "small",
@@ -36,7 +36,7 @@ pkg_tar(
 layer_from_tar(
     name = "app_layer_img",
     src = ":app_layer",
-    optimize = True,  # dedupe + recompress (zstd: .bazelrc)
+    optimize = True,  # dedupe + zstd (see .bazelrc)
 )
 
 image_manifest(
@@ -44,10 +44,10 @@ image_manifest(
     base = image("python_base_img"),
     entrypoint = ["/app/app"],
     layers = [":app_layer_img"],
+    platform = LINUX,  # a Linux image, even on a Mac
 )
 
-# The layer really carries the prebuilt manylinux wheel — no compiler ran, and
-# no sdist sources came along. See ../layer_test.py.
+# Task 2 — opens the layer: the prebuilt wheel is inside, no sdist leftovers.
 py_test(
     name = "image_layer_test",
     size = "small",
@@ -57,6 +57,7 @@ py_test(
     main = "layer_test.py",
 )
 
+# Green even with deps = []: a build_test can't see what's inside an image.
 build_test(
     name = "image_build_test",
     targets = [":image"],

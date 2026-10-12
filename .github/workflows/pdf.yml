@@ -25,6 +25,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: pdf-${{ github.ref }}
   cancel-in-progress: true
@@ -32,8 +35,6 @@ concurrency:
 jobs:
   export:
     runs-on: ubuntu-24.04 # pinned: `latest` moves when GitHub rolls a new image
-    permissions:
-      contents: write # only to attach the PDF to a published release
     steps:
       - uses: actions/checkout@v7
 
@@ -66,10 +67,22 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  # Its own job so that only a published release ever holds a write token;
+  # the export above runs on every push and pull request with read-only.
+  attach:
+    needs: export
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: building-without-bytes-${{ github.sha }}
+
       - name: Attach the PDF to the release
-        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
-            docs/building-without-bytes.pdf --clobber
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" building-without-bytes.pdf --clobber

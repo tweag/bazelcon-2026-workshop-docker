@@ -66,7 +66,8 @@ def main(argv: list[str] | None = None) -> int:
             sys.stderr.write(
                 "\n[skip] `dot` not found on PATH; "
                 "printed DOT source only. "
-                "Add the graphviz system layer to render a PNG.\n"
+                "Add the graphviz system layer "
+                "to render a PNG.\n"
             )
             return 0
         out = graph.render(

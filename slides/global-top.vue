@@ -24,8 +24,8 @@ const isDark = computed(() => ['cover', 'section', 'statement'].includes(current
   <div class="deck-footer-layer">
     <div class="deck-footer" :class="{ dark: isDark }">
       BazelCon 2026 ·
-      <a href="https://github.com/tweag/bazelcon-2026-workshop-docker-build"
-         target="_blank" rel="noopener">github.com/tweag/bazelcon-2026-workshop-docker-build</a>
+      <a href="https://github.com/tweag/bazelcon-2026-workshop-docker"
+         target="_blank" rel="noopener">github.com/tweag/bazelcon-2026-workshop-docker</a>
     </div>
     <div class="deck-logo" :class="{ dark: isDark }" aria-hidden="true" v-html="tweagLogo" />
   </div>

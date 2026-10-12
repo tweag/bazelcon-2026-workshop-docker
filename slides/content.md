@@ -9,8 +9,7 @@ This is the source of truth for what the workshop *says and does*;
 story — cooking a sandwich**: software is the *secret sauce*, a container image is
 a *sandwich of tar layers*, a `Dockerfile` is a *fridge sandwich* (tasty once,
 never reproducible), and Bazel is the *precise kitchen* you can build the
-cookware inside of. Source outline: [`../ref/draft.md`](../ref/draft.md) ·
-Proposal: [`../PROPOSAL.md`](../PROPOSAL.md).
+cookware inside of.
 
 > **Abstract.** In modern CI/CD the traditional `docker build` is often the
 > slowest link: imperative, sequential Dockerfiles struggle with cache
@@ -28,7 +27,7 @@ slide projects this run-sheet, a **lab card** slide right after it gives the two
 ways to follow along (the README setup on a laptop, or fork + PR with GitHub
 Actions doing the building), and each module closes on its own **Lab** slide.
 
-**Budget:** the deck is **44 main slides ＋ 10 appendix**, retimed to **~79.5 min of
+**Budget:** the deck is **44 main slides ＋ 11 appendix**, retimed to **~79.5 min of
 content in the 90-min slot** — the remaining ~10.5 min is deliberate slack for
 questions, a slow laptop, and a demo that misbehaves. Don't spend it in advance.
 
@@ -440,7 +439,7 @@ rush it.)*
 *(Caveat kept **off** the slide deliberately: `dot -V` runs, but `-Tpng`/`-Tsvg`
 need the plugin registry at `/usr/lib/.../graphviz/config6` that Debian's postinst
 normally writes via `dot -c`. Generating it at build time is the documented
-follow-up — see the BUILD comment / TASK §8.4. Say it only if asked: it costs two
+follow-up — see the comment in `samples/distroless/BUILD.bazel`. Say it only if asked: it costs two
 minutes Module 2 doesn't have, and it deflates the payoff a beat after you land
 it.)*
 
@@ -505,11 +504,9 @@ pantry framing once, here at Push — "push once, and every kitchen pulls the ex
 same ingredient." The "one shelf, many dishes" bullet moved onto Module 4's
 chain-wide pantry slide.)*
 
-**Optimizing the push.** *(This slide was recut in the review pass. It used to be
-"eager vs lazy" as two symmetric columns **before** either had been run — which
-meant the audience read about lazy, whose demo is in the appendix, before they had
-seen eager, whose demo was on the same slide. Now the doing is on the previous
-slide and this one is purely the optimizations, in the order they pay off.)*
+**Optimizing the push.** *(The doing is on the previous slide; this one is purely the optimizations, in
+the order they pay off. Eager comes first because the room just ran it; lazy's
+demo is in the appendix.)*
 "Everything from here is about not moving bytes you don't have to. **One:** only
 the blobs the registry doesn't already have go up — Module 2's dedup, now spent as
 **bandwidth**, so a shared base layer uploads once. Run `push_eager` a second time
@@ -566,9 +563,7 @@ you move *none* of the bytes."
 *(On screen: `without-bytes.png` — paper dispatch dockets travelling build →
 registry → run across the top, while the heavy provisions (prosciutto, herbs,
 béchamel, pickles) sit parked on the CAS vault shelf below and never move. **Say
-the metaphor**: "the tickets travel; the ham stays on the shelf." The plate was
-re-cropped in the review pass to drop its ornamental title band, so it is tighter
-than in older exports.)*
+the metaphor**: "the tickets travel; the ham stays on the shelf.")*
 
 **The pantry, chain-wide: cache + RBE.** "Scale the shared pantry from one
 kitchen to a restaurant *chain*. A **remote cache** is one content-addressed
@@ -577,8 +572,7 @@ anywhere: CI, your laptop, the next PR. **Remote execution (RBE)** adds a brigad
 of workers assembling layers in parallel from that same pantry. Content-addressing
 is exactly what makes a shared cache *safe*: same digest ⇒ same bytes."
 
-*(On screen: `remote-cache-rbe.png`. **The plate now labels itself** — it was
-relabelled in the review pass, so the lettering reads `the remote cache — one
+*(On screen: `remote-cache-rbe.png`. **The plate labels itself**: the lettering reads `the remote cache — one
 content-addressed pantry` at the centre, `your laptop`, `CI — the hotel pass`, and
 `line cooks — RBE workers`. You no longer have to recite the mapping; **do** still
 say the metaphor — "one commissary larder, and every kitchen on the chain draws
@@ -606,9 +600,9 @@ graph." The Dockerfile-vs-Bazel comparison table moved to the appendix.)*
 
 # Wrap-up + Q&A (5m)
 
-**Takeaways.** *(Rewritten in the review pass to track the modules in order, so
-each line is something the room actually watched happen rather than a slogan. Read
-them as a walk back through the morning.)*
+**Takeaways.** *(One line per module, in order, so each line is something the room
+actually watched happen rather than a slogan. Read them as a walk back through
+the morning.)*
 **Declare, don't script** — a layer is a build output, not a step a daemon runs
 *(Module 1)* · **split by volatility** — independent layers build **in parallel**,
 byte-identical ones **dedupe**, and `scratch` keeps the image thin *(Module 2)* ·
@@ -647,8 +641,8 @@ run**, **testing without a daemon** (`docker run` as a test? → cheaper tastes 
 `container_structure_test` → when the image won't run), **looking inside an
 image** (inspecting a layer outside Bazel → or skip the layout), **lazy push**
 (Experiment 2; needs a remote cache, see the Module 4 note), the **Dockerfile vs
-`rules_img` comparison table**, **what "hermetic" still borrowed**, and
-**"Coming from `rules_oci`?"**. The two comparison slides are different, so name
+`rules_img` comparison table**, **what "hermetic" still borrowed**, **how the plates
+were made**, and **"Coming from `rules_oci`?"**. The two comparison slides are different, so name
 the one you mean._
 
 **`docker run` as a test?** "A test is a **self-verifying requirement** — the dish
@@ -681,12 +675,10 @@ parallel." (On screen: `../samples/python/image_test.yaml`.)
 > `BUILD.bazel` and re-run to watch the metadata test fail in the sandbox (no
 > container ever started).
 
-**When the image won't run.** *(New in the 2026-09-09 review pass, answering
-"how would you inspect the contents if the generated image is broken?". Moved
-from the end of Module 2 to the appendix in the 2026-10-02 pass: the in-room
-Lab 2 never stacks an apt layer on a distro base, so nobody hits `mergedusr`
-there, and its real point is the blind spot of the structure test on the slide
-before. Reach for it when someone asks "what can `container_structure_test`
+**When the image won't run.** *(Answers "how would you inspect the contents if the generated
+image is broken?". It sits in the appendix because the in-room Lab 2 never
+stacks an apt layer on a distro base, so nobody hits `mergedusr` there, and its
+real point is the blind spot of the structure test on the slide before. Reach for it when someone asks "what can `container_structure_test`
 actually test?". The failure is **Level 2's ★ Stretch B** (`mergedusr = False`
 on purpose); the repo ships `mergedusr = True`, so say that, or people will
 think the lab is broken.)*
@@ -708,8 +700,8 @@ could not run a single binary. That sentence is lifted from
 `.github/workflows/labs.yml`, where a `docker run` smoke job now covers the gap.
 Say it plainly: a green structure test proves the *files* are there, not that the
 **loader** can find them. This is also the shortest honest answer to "what can
-`container_structure_test` actually test?" — TASK §12 wanted a whole slide for
-that; this clause does the load-bearing part.)*
+`container_structure_test` actually test?", without spending a whole slide on
+it.)*
 
 *(Then the two probes, both daemonless, both needing nothing installed:
 `tar tf bazel-bin/labs/level2_ghost/app_layer.tar` answers "what is actually in
@@ -719,8 +711,7 @@ decodes the structure test's bare `FAIL` into the check that failed. Do **not**
 mention sparse layouts or lazy pulls here; the next two slides ("Inspecting a
 layer outside Bazel", "Or skip the layout entirely") are where they live.)*
 
-**Inspecting a layer outside Bazel.** *(New in the 2026-09-09 review pass,
-answering "how can I use any tool to inspect the layer outside Bazel, and how do
+**Inspecting a layer outside Bazel.** *(Answers "how can I use any tool to inspect the layer outside Bazel, and how do
 I deal with the symlinks to ensure an OCI folder?". It lives in the appendix
 because every explanation on it bottoms out in "the bytes aren't local", which is
 Module 4 — and the appendix sits after Module 4, so the prerequisite is already
@@ -780,8 +771,8 @@ default (`--sandbox_default_allow_network` is `true`, and this repo doesn't chan
 it). So say "shouldn't", not "can't". `--nosandbox_default_allow_network` is the
 flag that makes it a rule.)*
 
-**What "hermetic" still borrowed from the laptop.** *(New in the 2026-10-02
-pass. Sits right after "Same artifact, two philosophies", whose table says
+**What "hermetic" still borrowed from the laptop.** *(Sits right
+after "Same artifact, two philosophies", whose table says
 "Hermetic build: Yes"; this is the honest footnote to that row. Reach for it
 when someone asks "is it *really* hermetic?", or right after an attendee hit
 the compiler error during setup.)*
@@ -797,11 +788,18 @@ accept. Docker and `dot` are on purpose, they're the runtime and the renderer."
 Close on the line that generalises: "remote execution, or a machine with
 nothing installed, is how you find the rest."
 
-**Coming from `rules_oci`? (the last appendix slide.)** *(New in the 2026-09-09
-review pass, answering "the slides don't explain what is a `rules_img`-only
-feature compared to `rules_oci`." It closes a real script↔deck gap: this file
-used to promise "the full comparison is at the end" after that table had been
-cut. Deliberately **migration**-framed rather than a feature matrix — the deck
+**How the plates were made.** *(Only if someone asks "did you draw these?"; about a
+minute. Keep it tool-neutral: say "an image model" and "an agent", never a
+product.)* "The illustrations are the one thing in this deck Bazel doesn't build.
+Each starts from the slide's claim and a house-style prompt; an image model draws
+it, an agent checks it against the claim, and I either sign off or send the
+prompt round again. Image models can't do real transparency, so every plate is
+drawn on flat magenta and keyed out by hand. And because none of that is
+reproducible, the PNGs are checked in as sources, exactly like the talk title
+cards. Everything after them is built."
+
+**Coming from `rules_oci`? (the last appendix slide.)** *(Answers "what is a `rules_img`-only feature compared to
+`rules_oci`?". Deliberately **migration**-framed rather than a feature matrix — the deck
 teaches `rules_img` only, and a big comparison table would re-centre a ruleset
 that was removed on purpose. It is also the last slide for a reason: answer it if
 asked, don't lead with it.)*

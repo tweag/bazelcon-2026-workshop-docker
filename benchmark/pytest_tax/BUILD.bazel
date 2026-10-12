@@ -1,7 +1,7 @@
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
-# The "docker tax" benchmark (TASK §4): the same unittest suite run under Bazel
+# The "docker tax" benchmark: the same unittest suite run under Bazel
 # vs. pytest-in-Docker, to measure the per-edit iteration cost of containerizing
 # for hermeticity.
 package(default_visibility = ["//visibility:public"])

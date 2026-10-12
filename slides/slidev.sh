@@ -4,7 +4,7 @@
 # Pragmatic (non-hermetic): runs the locally-installed Slidev from
 # slides/node_modules, but on the Bazel-pinned Node toolchain (SLIDEV_NODE, set
 # by the sh_binary) rather than whatever `node` the host has. Hermetic wrapping
-# via aspect_rules_js is the spike tracked in TASK §3.8. Run targets, not build
+# via aspect_rules_js is still to do. Run targets, not build
 # outputs:
 #   bazel run //slides:present
 #   bazel run //slides:export_pdf

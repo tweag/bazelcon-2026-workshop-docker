@@ -86,7 +86,7 @@ sh_binary(
 
 # `bazel run //tools:render_graph -- //...` renders the dep graph to
 # slides/graphs/*.png via `dot`. Non-hermetic by design (needs bazel + dot on
-# PATH); see TASK §3 task 10 for the hermetic aspect-based alternative.
+# PATH). A hermetic alternative would be an aspect that emits the graph.
 py_binary(
     name = "render_graph",
     srcs = ["render_graph.py"],

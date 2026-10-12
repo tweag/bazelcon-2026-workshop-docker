@@ -5,10 +5,36 @@ out to a `tesseract` binary pip never installs. That binary is the ghost. Make
 it real by adding a **pinned apt layer** (no `RUN apt-get`, no daemon, no
 network), then prove it with a daemonless structure test.
 
+```mermaid
+flowchart TD
+  subgraph pip["pip install pytesseract"]
+    py["pytesseract<br/>pure Python"]
+  end
+  subgraph apt["@tesseract_apt//:flat: pinned .debs"]
+    bin["tesseract binary"] --> lib["libtesseract + leptonica"]
+    bin -->|TESSDATA_PREFIX| data["eng.traineddata"]
+  end
+  py -->|"subprocess: needs it on PATH"| bin
+```
+
 **Deck concepts:** system deps become pinned bytes (`apt.install` +
 `layer_from_tar`) · `env` is an attribute, not a step · daemonless validation
 (`container_structure_test`, `driver = "tar"`) · *when the image won't run*
 (`mergedusr`).
+
+```mermaid
+flowchart TD
+  hub["@labs_pypi<br/>pytesseract + pillow"] --> app[":app<br/>py_binary"]
+  app --> tar[":app_layer<br/>pkg_tar"] --> applayer[":app_layer_img<br/>layer_from_tar"]
+  lock["tesseract.yaml<br/>+ tesseract.lock.json"] --> flat["@tesseract_apt//:flat"]
+  flat -. "TODO task 1: tesseract layer" .-> image[":image<br/>image_manifest"]
+  base["python_base_img"] --> image
+  applayer --> image
+  env["TESSDATA_PREFIX"] -. "TODO task 2: env" .-> image
+
+  app --> t0(["app_test<br/>Task 0: green"])
+  image --> itar[":image.tar<br/>image_load tarball"] --> t1(["image_structure_test<br/>Tasks 1–2"])
+```
 
 ## Start
 
@@ -17,12 +43,13 @@ bazel test //labs/level2_ghost:image_structure_test   # starts RED (3 checks)
 bazel run  //labs:explain -- level2                   # decodes the bare "FAIL"
 ```
 
-No install? Edit in a fork and let GitHub check it: see
-[Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
-
 You only edit [`BUILD.bazel`](BUILD.bazel). Look for the `# TODO`s. The checks
 live in [`image_test.yaml`](image_test.yaml); the packages are listed in
 [`tesseract.yaml`](tesseract.yaml).
+
+> [!TIP]
+> No install? Edit in a fork and let GitHub check it: see
+> [Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
 
 ## Tasks
 
@@ -30,7 +57,7 @@ live in [`image_test.yaml`](image_test.yaml); the packages are listed in
 |---|---|---|---|
 | 0 | `bazel test //labs/level2_ghost:app_test` | 🟢 | read it: with an empty `PATH` the engine call fails, which proves the ghost in pure Python |
 | 1 | `bazel test //labs/level2_ghost:image_structure_test` | 🔴 | `/usr/bin/tesseract` + `eng.traineddata` are in the image |
-| 2 | *same test* | 🔴 | `TESSDATA_PREFIX` is set in the image config |
+| 2 | *same test* | 🔴 | `TESSDATA_PREFIX` in the image config names the data directory |
 | ★ | `docker run --rm bwb/level2-ghost --ocr /app/sample.png` | – | OCR runs from the pinned layer (needs Docker) |
 | ★ | *same test* | – | the tesseract layer is compressed (Stretch C) |
 
@@ -59,9 +86,18 @@ image_manifest(
 ```
 </details>
 
-### Task 2 — point the engine at its data
+### Task 2 — make the data path explicit
 
-The binary alone can't find its language data. Set the env var on the image.
+Today the engine finds its data without help: Debian compiled
+`/usr/share/tesseract-ocr/5/tessdata` into libtesseract as the default. That
+default is invisible (it lives inside a binary) and it moves with the build:
+Debian's tesseract 4 looked in `.../4.00/tessdata`, a source build looks in
+`/usr/local/share/tessdata`. Re-pin to one of those and OCR fails at run time
+with `Error opening data file`, while every build-time check stays green.
+
+Write the path into the image config instead. The structure test then checks the
+variable *and* the file it points to, so a re-pin that moves the data goes red
+at build time.
 
 <details><summary>Answer</summary>
 

@@ -1,13 +1,36 @@
 # Level 3 — The Hardware Wall (`pyopencl` + POCL)
 
-**Goal:** `pip install pyopencl` gives you bindings, but OpenCL needs a driver
-(an *ICD*) to find any device. Bundle **POCL**, a CPU OpenCL implementation, as a
-hermetic layer so the image runs a kernel anywhere. Then see why a real GPU
-can't be baked in.
+**Goal:** `pip install pyopencl` gives you bindings and even an OpenCL loader,
+but no *device*: the loader looks for a driver (an *ICD*) and finds none. Bundle
+**POCL**, a CPU OpenCL implementation, as a hermetic layer so the image runs a
+kernel anywhere.
+
+```mermaid
+flowchart TD
+  subgraph pip["pip install pyopencl"]
+    py["pyopencl<br/>bindings"] --> loader["its own libOpenCL<br/>ICD loader"]
+  end
+  subgraph apt["@pocl_apt//:flat: pinned .debs"]
+    icd["/etc/OpenCL/vendors/pocl.icd"] --> pocl["libpocl.so.2<br/>CPU device"]
+  end
+  loader -->|reads| icd
+```
 
 **Deck concepts:** system deps become pinned bytes (same pattern as Level 2) ·
-daemonless validation · the one deliberate break in hermeticity: a **runtime
-device contract**.
+daemonless validation · a device is a runtime dependency, not just a library.
+
+```mermaid
+flowchart TD
+  hub["@labs_pypi<br/>pyopencl + numpy"] --> app[":app<br/>py_binary"]
+  app --> tar[":app_layer<br/>pkg_tar"] --> applayer[":app_layer_img<br/>layer_from_tar"]
+  lock["pocl.yaml<br/>+ pocl.lock.json"] --> flat["@pocl_apt//:flat"]
+  flat -. "TODO task 1: POCL layer" .-> image[":image<br/>image_manifest"]
+  base["python_base_img"] --> image
+  applayer --> image
+
+  app --> t0(["app_test<br/>Task 0: green"])
+  image --> itar[":image.tar<br/>image_load tarball"] --> t1(["image_structure_test<br/>Task 1"])
+```
 
 ## Start
 
@@ -16,19 +39,20 @@ bazel test //labs/level3_hardware:image_structure_test   # starts RED
 bazel run  //labs:explain -- level3
 ```
 
-No install? Edit in a fork and let GitHub check it: see
-[Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
-
 You only edit [`BUILD.bazel`](BUILD.bazel). Look for the `# TODO`s. The checks
 are in [`image_test.yaml`](image_test.yaml); the packages are listed in
 [`pocl.yaml`](pocl.yaml).
+
+> [!TIP]
+> No install? Edit in a fork and let GitHub check it: see
+> [Check your answers on GitHub](../README.md#check-your-answers-on-github-nothing-to-install).
 
 ## Tasks
 
 | # | Run | Starts | Done when |
 |---|---|---|---|
 | 0 | `bazel test //labs/level3_hardware:app_test` | 🟢 | read it: the bindings and device probe work; whether a device *exists* depends on the environment |
-| 1 | `bazel test //labs/level3_hardware:image_structure_test` | 🔴 | `libOpenCL.so.1` + `/etc/OpenCL/vendors/pocl.icd` are in the image |
+| 1 | `bazel test //labs/level3_hardware:image_structure_test` | 🔴 | `/etc/OpenCL/vendors/pocl.icd` + `libpocl.so.2` are in the image |
 | ★ | `docker run --rm bwb/level3-hardware` | – | `vector_add` runs on the CPU (needs Docker) |
 | ★ | *same test* | – | the POCL layer is compressed (shrink the layer) |
 
@@ -42,7 +66,7 @@ as Level 2.
 ```python
 layer_from_tar(
     name = "pocl_layer_img",
-    src = "@pocl_apt//:flat",  # libOpenCL loader + POCL CPU ICD + /etc/OpenCL/vendors
+    src = "@pocl_apt//:flat",  # POCL CPU device + its /etc/OpenCL/vendors entry
 )
 
 image_manifest(
@@ -56,22 +80,16 @@ image_manifest(
 ```
 </details>
 
-### ★ Stretch — run a kernel, then make room for a GPU
+### ★ Stretch — run a kernel
 
 ```bash
 bazel run //labs/level3_hardware:image_load
 docker run --rm bwb/level3-hardware        # -> vector_add on OpenCL OK: [11.0, 22.0, 33.0]
 ```
 
-This runs with no GPU and no host driver, so it works on any machine. To use a
-real GPU, the host has to hand the device to the container:
-
-- NVIDIA: `docker run --gpus all ...` (NVIDIA Container Toolkit)
-- Intel/AMD: `docker run --device /dev/dri ...`
-
-The driver can't be baked in because the GPU userspace driver must match the
-**host kernel module**. So the device becomes a *declared runtime contract*: the
-build stays hermetic and only the device binding comes from outside.
+It needs nothing from the host, so it works on any machine. That's why this lab
+uses POCL: a CPU device fits in a layer. A real GPU doesn't, because its device
+and kernel driver belong to the host and only exist at run time.
 
 ### ★ Stretch — shrink the layer
 
@@ -103,13 +121,13 @@ bazel run //labs:explain -- level3
 diff labs/level3_hardware/BUILD.bazel labs/level3_hardware/solution/BUILD.bazel
 ```
 
-Re-pin after editing `pocl.yaml`: `bazel run @pocl_apt//:lock`. The structure
-test paths are for amd64; on arm64 the loader lands under `aarch64-linux-gnu`.
+Re-pin after editing `pocl.yaml`: `bazel run @pocl_apt//:lock`. The loader's
+path depends on the CPU (`x86_64-linux-gnu` or `aarch64-linux-gnu`), so the test
+adds [`image_test_x86_64.yaml`](image_test_x86_64.yaml) or
+[`image_test_aarch64.yaml`](image_test_aarch64.yaml) to match the image.
 
 ## Read more
 
 - [POCL](https://github.com/pocl/pocl) · [pyopencl docs](https://documen.tician.de/pyopencl/)
 - [`rules_distroless` apt extension](https://github.com/GoogleContainerTools/rules_distroless)
   · [Debian usr-merge](https://wiki.debian.org/UsrMerge)
-- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
-  · [`docker run --device`](https://docs.docker.com/reference/cli/docker/container/run/#device)

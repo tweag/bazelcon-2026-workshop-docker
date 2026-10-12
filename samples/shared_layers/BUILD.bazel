@@ -5,6 +5,7 @@ load("@rules_img//img:layer.bzl", "layer_from_tar")
 load("@rules_img_images.bzl", "image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_python//python:defs.bzl", "py_binary")
+load("//tools/platforms:defs.bzl", "LINUX")
 
 # Two real-ish services — an `api` and a `worker` — that share layers (workshop
 # Q5). Both sit on the same python_base_img and include the same shared config +
@@ -62,14 +63,16 @@ image_manifest(
     name = "image_api",
     base = image("python_base_img"),
     entrypoint = ["python", "/opt/app/main.py"],
-    layers = [":common_layer_img", ":api_layer_img"],  # common_layer shared ↓
+    layers = [":common_layer_img", ":api_layer_img"],  # shared ↓
+    platform = LINUX,
 )
 
 image_manifest(
     name = "image_worker",
     base = image("python_base_img"),
     entrypoint = ["python", "/opt/app/main.py"],
-    layers = [":common_layer_img", ":worker_layer_img"],  # same common layer → same blob
+    layers = [":common_layer_img", ":worker_layer_img"],  # → same blob
+    platform = LINUX,
 )
 #endregion
 

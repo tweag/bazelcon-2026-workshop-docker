@@ -1,9 +1,9 @@
 name: pages
 
-# Build the Slidev deck and publish it to GitHub Pages (TASK §6).
-# The build job enables Pages itself (actions/configure-pages enablement: true),
-# so no manual Settings toggle is needed when the token is permitted; if your
-# org restricts that, set Settings → Pages → Source = "GitHub Actions" once.
+# Build the Slidev deck and publish it to GitHub Pages.
+# A repo admin sets Settings → Pages → Source = "GitHub Actions" once: the
+# workflow can't do it, because enabling Pages needs a token other than
+# GITHUB_TOKEN (see actions/configure-pages `enablement`).
 
 on:
   push:
@@ -30,10 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Enable Pages (Source = GitHub Actions) from the workflow itself.
       - uses: actions/configure-pages@v6
-        with:
-          enablement: true
 
       - uses: actions/setup-node@v7
         with:

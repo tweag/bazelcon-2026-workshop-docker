@@ -17,7 +17,7 @@ runs:
         df -h /
 
     - name: Cache Bazel downloads
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cache/bazel-repo
         key: labs-repo-${{ hashFiles('MODULE.bazel.lock', 'labs/**/*.lock.json', 'labs/requirements_lock.txt') }}
