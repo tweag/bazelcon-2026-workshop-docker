@@ -175,7 +175,8 @@ npm.npm_translate_lock(
     # Slidev loads @vue/compiler-sfc via a dynamic import in local-pkg; under the
     # strict pnpm node_modules it must be hoisted to the root to be resolvable.
     public_hoist_packages = {
-        "@vue/compiler-sfc": ["slides"],
+        # Hoist the Vue runtime's compiler even if transitive copies coexist.
+        "@vue/compiler-sfc@3.5.43": ["slides"],
         # @slidev/client imports markdown-it-github-alerts' CSS by subpath.
         "markdown-it-github-alerts": ["slides"],
     },

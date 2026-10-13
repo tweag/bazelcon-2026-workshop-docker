@@ -12,17 +12,23 @@
     "export": "slidev export --per-slide --output ../docs/building-without-bytes.pdf"
   },
   "dependencies": {
-    "@slidev/cli": "^52.16.0",
+    "@slidev/cli": "^52.20.1",
     "@slidev/theme-default": "^0.25.0",
     "playwright-chromium": "^1.63.0",
     "slidev-addon-rabbit": "^0.4.0"
   },
   "devDependencies": {
     "@iconify-json/carbon": "^1.2.28",
-    "@iconify-json/ph": "^1.2.2"
+    "@iconify-json/ph": "^1.2.2",
+    "markdown-it": "^14.3.2"
+  },
+  "overrides": {
+    "@unocss/vite": {
+      "magic-string": "1.4.2"
+    }
   },
   "pnpm": {
-    "//": "Phase 1 hermetic build: no package runs install/postinstall scripts (empty allowlist). npm ignores this key.",
+    "//": "rules_js reads this beside its lockfile; pnpm-workspace.yaml keeps the same empty allowlist for pnpm.",
     "onlyBuiltDependencies": []
   }
 }

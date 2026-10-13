@@ -1,0 +1,11 @@
+# Slidev uses this marker to allow code snippets from the repository workspace.
+packages:
+  - slides
+# Keep Bazel's lockfile beside slides/package-lock.json.
+sharedWorkspaceLockfile: false
+# Preserve the browser-free hermetic build's disabled install hooks.
+onlyBuiltDependencies: []
+# Match slides/package.json's npm override until UnoCSS fixes duplicate CSS.
+# https://github.com/unocss/unocss/issues/5373
+overrides:
+  '@unocss/vite>magic-string': 1.4.2
