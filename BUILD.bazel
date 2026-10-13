@@ -9,12 +9,13 @@ package(default_visibility = ["//visibility:public"])
 # (`<<< ../MODULE.bazel#…`), so it has to be a readable source and a build input.
 exports_files(["MODULE.bazel"])
 
-# Stage it into bazel-bin so the hermetic //slides:build (which runs from
-# bazel-bin/slides) resolves `../MODULE.bazel`. Mirrors //samples/*:slides_inputs;
+# Stage the module and workspace marker into bazel-bin so the hermetic
+# //slides:build resolves `../MODULE.bazel` and permits snippets from sibling
+# packages. Mirrors //samples/*:slides_inputs;
 # copy_to_bin must be owned by the package that owns the file.
 copy_to_bin(
     name = "slides_inputs",
-    srcs = ["MODULE.bazel"],
+    srcs = ["MODULE.bazel", "pnpm-workspace.yaml"],
 )
 
 # Convenience alias: `bazel build //:slides` renders the deck.
