@@ -18,7 +18,7 @@
     "slidev-addon-rabbit": "^0.4.0"
   },
   "devDependencies": {
-    "@iconify-json/carbon": "^1.2.28",
+    "@iconify-json/carbon": "^1.2.29",
     "@iconify-json/ph": "^1.2.2",
     "markdown-it": "^14.3.2"
   },
